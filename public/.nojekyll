@@ -1,0 +1,2 @@
+# This file prevents GitHub Pages from using Jekyll to process our build files.
+# It solves issues like MIME type errors for underscored directories or specific assets.
