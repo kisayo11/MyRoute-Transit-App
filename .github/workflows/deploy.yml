@@ -51,7 +51,7 @@ jobs:
           cp dist/index.html dist/404.html
           
           echo "Checking if asset paths are correctly resolved..."
-          grep -q "/MyRoute-Transit-App/assets/" dist/index.html || { echo "Warning: Expected path not found in index.html. Checking build structure..."; ls -R dist; }
+          grep -q "/MyRoute-Transit-App/assets/" dist/index.html || { echo "Error: Expected asset path not found in index.html. Checking build structure..."; ls -R dist; exit 1; }
           
           if [ -f dist/.nojekyll ]; then
             echo ".nojekyll found in dist root. OK."
