@@ -29,6 +29,10 @@ export default defineConfig({
             type: 'image/svg+xml'
           }
         ]
+      },
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true
       }
     })
   ],

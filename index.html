@@ -5,6 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyRoute</title>
+    <script>
+      // 서비스 워커 강제 초기화 (v0.3.0 리셋)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('ServiceWorker unregistered for version sync');
+          }
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
