@@ -1,0 +1,7 @@
+# Force MIME types for critical assets
+*.js text/javascript
+*.css text/css
+*.svg image/svg+xml
+*.html text/html
+*.json application/json
+*.webmanifest application/manifest+json
