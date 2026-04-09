@@ -91,8 +91,23 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
     
     // 사용자가 입력한 추가 도보 시간을 추가
     const customTotalMins = selectedPath.info.totalTime + walkToStationMins + walkFromStationMins
+    
+    // 매핑 로직: 첫 번째 도보와 마지막 도보에 사용자 입력을 강제로 반영
+    const updatedSubPaths = selectedPath.subPath.map((sp: any, idx: number) => {
+      // 첫 번째 도보 구간 (Origin -> Station)
+      if (idx === 0 && sp.trafficType === 3 && walkToStationMins > 0) {
+        return { ...sp, sectionTime: walkToStationMins }
+      }
+      // 마지막 도보 구간 (Station -> Destination)
+      if (idx === selectedPath.subPath.length - 1 && sp.trafficType === 3 && walkFromStationMins > 0) {
+        return { ...sp, sectionTime: walkFromStationMins }
+      }
+      return sp
+    })
+
     const extendedPathInfo = {
       ...selectedPath,
+      subPath: updatedSubPaths,
       customWalkMins: walkToStationMins + walkFromStationMins,
       info: {
         ...selectedPath.info,

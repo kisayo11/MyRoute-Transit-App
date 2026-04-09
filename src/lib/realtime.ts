@@ -27,9 +27,26 @@ export interface BusArrival {
 }
 
 /**
+ * 서비스키 정규화 (이중 인코딩 방지)
+ * 국가공공데이터포털 키는 이미 인코딩된 경우가 많음. 
+ * 이를 안전하게 디코딩 후 다시 인코딩하여 프록시 전달용 URL에 사용함.
+ */
+function normalizeKey(key: string): string {
+  try {
+    // 만약 이미 인코딩된 키(%)라면 디코딩하여 원본으로 만듦
+    if (key.includes('%')) {
+      return decodeURIComponent(key);
+    }
+  } catch (e) {
+    // 실패 시 원본 그대로 사용
+  }
+  return key;
+}
+
+/**
  * 타임아웃 및 재시도 로직을 포함한 안전한 페처
  */
-async function fetchWithRetry(url: string, timeout = 10000, retries = 1): Promise<string> {
+async function fetchWithRetry(url: string, timeout = 12000, retries = 1): Promise<string> {
   for (let i = 0; i <= retries; i++) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(timeout) });
@@ -38,7 +55,7 @@ async function fetchWithRetry(url: string, timeout = 10000, retries = 1): Promis
     } catch (err: any) {
       if (i === retries) throw err;
       console.warn(`Retrying fetch (${i + 1}/${retries})...`, err.message);
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   throw new Error('Fetch failed after retries');
@@ -53,14 +70,16 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
   }
 
   try {
-    const key = import.meta.env.VITE_PUBLIC_SUBWAY_API_KEY || import.meta.env.VITE_SEOUL_SUBWAY_KEY;
-    if (!key) return { ...emptyResponse, error: '인증키가 설정되지 않았습니다' };
+    const rawKey = import.meta.env.VITE_PUBLIC_SUBWAY_API_KEY || import.meta.env.VITE_SEOUL_SUBWAY_KEY;
+    if (!rawKey) return { ...emptyResponse, error: '인증키 누락' };
+    const key = normalizeKey(rawKey);
 
     const cleanName = stationName.replace(/역$/, '')
+    // 지하철 API는 프록시 없이도 CORS가 가끔 허용되지만, 안정성을 위해 corsproxy 사용
     const targetUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodeURIComponent(cleanName)}`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const text = await fetchWithRetry(url, 10000, 1);
+    const text = await fetchWithRetry(url, 12000, 1);
     if (!text || text.trim().startsWith('<!DOCTYPE')) {
       return { ...emptyResponse, error: '서버 응답 오류 (HTML)' }
     }
@@ -87,7 +106,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     return { ...emptyResponse, error: data.errorMessage?.message || '미운행 또는 정보 없음' }
   } catch (error: any) {
     console.error('Subway API Error:', error)
-    return { ...emptyResponse, error: '응답 지연 또는 통신 오류' }
+    return { ...emptyResponse, error: '통신 실패' }
   }
 }
 
@@ -101,15 +120,21 @@ export async function getRealtimeBus(stId: string): Promise<RealtimeResponse<Bus
   }
 
   try {
-    const key = import.meta.env.VITE_PUBLIC_BUS_API_KEY || import.meta.env.VITE_SEOUL_BUS_KEY;
-    if (!key) return { ...emptyResponse, error: '인증키가 설정되지 않았습니다' };
+    const rawKey = import.meta.env.VITE_PUBLIC_BUS_API_KEY || import.meta.env.VITE_SEOUL_BUS_KEY;
+    if (!rawKey) return { ...emptyResponse, error: '인증키 누락' };
+    const key = normalizeKey(rawKey);
 
-    const targetUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?ServiceKey=${key}&stId=${stId}&resultType=json`
+    // 국가포털은 ServiceKey 파라미터가 매우 민감함.
+    // %가 포함된 키라면 이미 인코딩된 것이므로 쌩으로 보내야 함? 
+    // 아니면 corsproxy가 디코딩하도록 맞춰야 함.
+    // 여기서 encodeURIComponent(key)를 하면 %는 %25가 됨. 
+    // corsproxy는 이를 받아 %로 변환함. 결과적으로 원본 %가 서버로 전달됨. (정석)
+    const targetUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?ServiceKey=${encodeURIComponent(key)}&stId=${stId}&resultType=json`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const text = await fetchWithRetry(url, 10000, 1);
+    const text = await fetchWithRetry(url, 15000, 1);
     if (!text || text.trim().startsWith('<!DOCTYPE')) {
-      return { ...emptyResponse, error: '서버가 응답하지 않습니다' }
+      return { ...emptyResponse, error: '인증 실패 (Error 30 가능성)' }
     }
 
     const data = JSON.parse(text)
@@ -138,6 +163,6 @@ export async function getRealtimeBus(stId: string): Promise<RealtimeResponse<Bus
     return { ...emptyResponse, error: header?.headerMsg || '도착 정보 없음' }
   } catch (error: any) {
     console.error('Bus API Error:', error)
-    return { ...emptyResponse, error: '응답 지연 또는 통신 오류' }
+    return { ...emptyResponse, error: '통신 실패' }
   }
 }
