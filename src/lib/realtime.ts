@@ -1,4 +1,4 @@
-const PROXY_URL = 'https://api.allorigins.win/raw?url='
+const PROXY_URL = 'https://corsproxy.io/?url='
 
 /**
  * 전역 대중교통 데이터 응답 규격
@@ -29,7 +29,7 @@ export interface BusArrival {
 /**
  * 타임아웃 및 재시도 로직을 포함한 안전한 페처
  */
-async function fetchWithRetry(url: string, timeout = 12000, retries = 1): Promise<string> {
+async function fetchWithRetry(url: string, timeout = 10000, retries = 1): Promise<string> {
   for (let i = 0; i <= retries; i++) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(timeout) });
@@ -53,12 +53,14 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
   }
 
   try {
+    const key = import.meta.env.VITE_PUBLIC_SUBWAY_API_KEY || import.meta.env.VITE_SEOUL_SUBWAY_KEY;
+    if (!key) return { ...emptyResponse, error: '인증키가 설정되지 않았습니다' };
+
     const cleanName = stationName.replace(/역$/, '')
-    // 포트 번호 없이 표준 80 포트 사용 (가장 안정적)
-    const targetUrl = `http://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/10/${encodeURIComponent(cleanName)}`
+    const targetUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodeURIComponent(cleanName)}`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const text = await fetchWithRetry(url, 12000, 1);
+    const text = await fetchWithRetry(url, 10000, 1);
     if (!text || text.trim().startsWith('<!DOCTYPE')) {
       return { ...emptyResponse, error: '서버 응답 오류 (HTML)' }
     }
@@ -99,12 +101,13 @@ export async function getRealtimeBus(stId: string): Promise<RealtimeResponse<Bus
   }
 
   try {
-    // ws.bus.go.kr 엔드포인트 사용 (Port 80 정규 서비스)
-    // resultType=json 파라미터가 핵심
-    const targetUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&stId=${stId}&resultType=json`
+    const key = import.meta.env.VITE_PUBLIC_BUS_API_KEY || import.meta.env.VITE_SEOUL_BUS_KEY;
+    if (!key) return { ...emptyResponse, error: '인증키가 설정되지 않았습니다' };
+
+    const targetUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?ServiceKey=${key}&stId=${stId}&resultType=json`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const text = await fetchWithRetry(url, 12000, 1);
+    const text = await fetchWithRetry(url, 10000, 1);
     if (!text || text.trim().startsWith('<!DOCTYPE')) {
       return { ...emptyResponse, error: '서버가 응답하지 않습니다' }
     }
