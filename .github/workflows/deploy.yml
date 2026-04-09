@@ -36,6 +36,8 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_ODSAY_API_KEY: ${{ secrets.VITE_ODSAY_API_KEY }}
+          VITE_SEOUL_SUBWAY_KEY: ${{ secrets.VITE_SEOUL_SUBWAY_KEY }}
+          VITE_SEOUL_BUS_KEY: ${{ secrets.VITE_SEOUL_BUS_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

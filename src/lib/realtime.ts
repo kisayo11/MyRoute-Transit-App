@@ -3,7 +3,7 @@ export async function getRealtimeSubway(stationName: string) {
   try {
     // "역" 자가 붙어있으면 제거 (예: 구의역 -> 구의)
     const cleanName = stationName.replace(/역$/, '')
-    const url = `https://swopenapi.seoul.go.kr/api/subway/sample/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
+    const url = `https://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
     
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) }) // 5초 타임아웃
     const data = await response.json()
@@ -26,7 +26,7 @@ export async function getRealtimeSubway(stationName: string) {
 export async function getRealtimeBus(arsId: string) {
   try {
     const cleanArsId = arsId.replace(/-/g, '')
-    const url = `https://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=sample&arsId=${cleanArsId}&resultType=json`
+    const url = `https://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&arsId=${cleanArsId}&resultType=json`
     
     const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
     const data = await response.json()
