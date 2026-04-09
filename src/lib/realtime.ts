@@ -3,7 +3,7 @@ export async function getRealtimeSubway(stationName: string) {
   try {
     // "역" 자가 붙어있으면 제거 (예: 구의역 -> 구의)
     const cleanName = stationName.replace(/역$/, '')
-    const url = `http://swopenapi.seoul.go.kr/api/subway/sample/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
+    const url = `https://swopenapi.seoul.go.kr/api/subway/sample/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
     
     const response = await fetch(url)
     const data = await response.json()
@@ -29,7 +29,7 @@ export async function getRealtimeBus(arsId: string) {
   try {
     // arsId가 "24-470" 같은 형식이면 "-" 제거 (API는 숫자만 받음)
     const cleanArsId = arsId.replace(/-/g, '')
-    const url = `http://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=sample&arsId=${cleanArsId}&resultType=json`
+    const url = `https://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=sample&arsId=${cleanArsId}&resultType=json`
     
     const response = await fetch(url)
     const data = await response.json()

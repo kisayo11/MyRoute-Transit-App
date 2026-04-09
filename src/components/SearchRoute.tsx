@@ -137,45 +137,43 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
 
       {step === 1 && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-3xl font-extrabold mb-2 tracking-tight">나만의 진짜 커스텀 경로</h2>
-          <p className="text-sm font-bold text-text-sub dark:text-text-sub-dark mb-6 leading-relaxed bg-primary/10 p-4 rounded-xl border border-primary/20">
-            앱 기능의 한계를 뛰어넘습니다.<br/>API오류 없이 내 발로 걸어서 조립하는 <span className="text-primary opacity-100 font-extrabold">레고블록형 환승 빌더</span>입니다!
-          </p>
+          <h2 className="text-3xl font-black mb-6 tracking-tight">경로 조립</h2>
+          
           <div className="space-y-6 relative">
             
             {/* STEP 1 */}
-            <div className="bg-black/5 dark:bg-white/5 p-5 rounded-3xl border border-border/50 dark:border-border-dark/50">
-              <h3 className="text-sm font-extrabold text-primary mb-3 flex items-center"><PersonStanding size={18} className="mr-1"/> 출발 장소 및 걷기 (선택)</h3>
+            <div className="bg-black/5 dark:bg-white/5 p-6 rounded-[2rem] border border-border/50 dark:border-border-dark/50">
+              <h3 className="text-xs font-black text-primary mb-3 flex items-center uppercase tracking-wider"><PersonStanding size={16} className="mr-1"/> 출발 장소 및 도보</h3>
               <div className="space-y-3">
                 <input 
                   className="w-full bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold"
-                  value={startPlaceName} onChange={(e) => setStartPlaceName(e.target.value)} placeholder="출발지 이름 (예: 구의동 우리집)"
+                  value={startPlaceName} onChange={(e) => setStartPlaceName(e.target.value)} placeholder="집 (별칭)"
                 />
                 <div className="flex items-center space-x-3 text-sm font-bold text-text-sub dark:text-text-sub-dark">
-                  <span>출발지에서 대략</span>
-                  <input type="number" min="0" className="w-[4.5rem] text-center bg-white dark:bg-[#1a1b22] border-none px-2 py-3 rounded-xl focus:ring-2 focus:ring-primary/50 text-black dark:text-white" value={walkToStationMins || ''} onChange={(e) => setWalkToStationMins(Number(e.target.value))} placeholder="0"/>
-                  <span>분 걸음</span>
+                  <span>도보</span>
+                  <input type="number" min="0" className="w-[4rem] text-center bg-white dark:bg-[#1a1b22] border-none px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-primary/50" value={walkToStationMins || ''} onChange={(e) => setWalkToStationMins(Number(e.target.value))} placeholder="0"/>
+                  <span>분 소요</span>
                 </div>
               </div>
             </div>
 
             {/* STEP 2 */}
-            <div className="bg-primary-bg p-5 rounded-3xl border border-primary/20 shadow-sm relative">
-              <h3 className="text-sm font-extrabold text-primary mb-3 flex items-center"><TrainFront size={18} className="mr-1"/> 실제 탑승/하차 지정</h3>
+            <div className="bg-primary-bg p-6 rounded-[2.5rem] border border-primary/20 shadow-sm relative">
+              <h3 className="text-xs font-black text-primary mb-4 flex items-center uppercase tracking-wider"><TrainFront size={16} className="mr-1"/> 탑승 및 하차역</h3>
               
               <div className="space-y-4">
                 <div className="relative">
                   <div className="flex gap-2">
-                    <input className="flex-1 bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold" value={startQuery} onChange={(e) => setStartQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(startQuery, 'start')} placeholder="실제 탈 곳 (예: 구의역)"/>
-                    <button onClick={() => handleSearchStation(startQuery, 'start')} className="px-4 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all"><Search size={18} /></button>
+                    <input className="flex-1 bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold" value={startQuery} onChange={(e) => setStartQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(startQuery, 'start')} placeholder="탑승역 (예: 구의역)"/>
+                    <button onClick={() => handleSearchStation(startQuery, 'start')} className="px-4 bg-primary text-white rounded-xl active:scale-90 transition-all"><Search size={18} /></button>
                   </div>
                   {startResults.length > 0 && (
                     <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
                       {startResults.map((st, idx) => (
                         <div key={idx} onClick={() => selectStation(st, 'start')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center">
-                          {st.stationClass === 1 ? <TrainFront size={14} className="text-primary mr-2" /> : 
-                           st.stationClass === 2 ? <Bus size={14} className="text-[#34C759] mr-2" /> : 
-                           <MapPin size={14} className="text-primary mr-2" />} 
+                          {st.stationClass === 1 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
+                           st.stationClass === 2 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
+                           <MapPin size={16} className="text-primary mr-2" />} 
                           {st.stationName}
                         </div>
                       ))}
@@ -183,20 +181,18 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
                   )}
                 </div>
 
-                <div className="text-center text-primary py-1 font-bold italic rotate-90 opacity-50">➔</div>
-
                 <div className="relative">
                   <div className="flex gap-2">
-                    <input className="flex-1 bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold" value={endQuery} onChange={(e) => setEndQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(endQuery, 'end')} placeholder="실제 내릴 곳 (예: 복정역)"/>
-                    <button onClick={() => handleSearchStation(endQuery, 'end')} className="px-4 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all"><Search size={18} /></button>
+                    <input className="flex-1 bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold" value={endQuery} onChange={(e) => setEndQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(endQuery, 'end')} placeholder="하차역 (예: 복정역)"/>
+                    <button onClick={() => handleSearchStation(endQuery, 'end')} className="px-4 bg-primary text-white rounded-xl active:scale-90 transition-all"><Search size={18} /></button>
                   </div>
                   {endResults.length > 0 && (
                     <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
                       {endResults.map((st, idx) => (
                         <div key={idx} onClick={() => selectStation(st, 'end')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center">
-                          {st.stationClass === 1 ? <TrainFront size={14} className="text-primary mr-2" /> : 
-                           st.stationClass === 2 ? <Bus size={14} className="text-[#34C759] mr-2" /> : 
-                           <MapPin size={14} className="text-primary mr-2" />} 
+                          {st.stationClass === 1 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
+                           st.stationClass === 2 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
+                           <MapPin size={16} className="text-primary mr-2" />} 
                           {st.stationName}
                         </div>
                       ))}

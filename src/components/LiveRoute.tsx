@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Navigation, MapPin, Loader2, TrainFront, PersonStanding, CheckCircle2, Info, ChevronRight, Bus, Repeat } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowLeft, Navigation, MapPin, Loader2, TrainFront, CheckCircle2, Info, ChevronRight, Bus, Repeat } from 'lucide-react'
 import { getRealtimeSubway, getRealtimeBus } from '../lib/realtime'
 
 export default function LiveRoute({ route, onBack }: { route: any, onBack: () => void }) {
   const [isActive, setIsActive] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [eta, setEta] = useState(route.path_info.info.totalTime)
+  const eta = route.path_info.info.totalTime
   const [gpsRequested, setGpsRequested] = useState(false)
   
   // 모든 구간의 실시간 데이터를 통합 관리
@@ -63,47 +63,42 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
     // 1. 지하철 세그먼트
     if (path.trafficType === 1) {
       const arrivals = realtimeData[`subway_${path.startName}`] || []
-      const fastDoor = path.door || path.fastTrainDoor // ODsay 데이터에서 추출
+      const fastDoor = path.door || path.fastTrainDoor
       
       return (
-        <div key={index} className="relative pb-12 pl-12 group">
-          <div className="absolute w-4 h-4 bg-white dark:bg-background-dark border-4 border-primary rounded-full -left-[32px] top-1.5 z-10" />
-          <div className={`absolute w-0.5 h-full ${isLast ? 'bg-transparent' : 'bg-primary/20'} -left-[25px] top-4`} />
+        <div key={index} className="relative pb-10 pl-12 group">
+          <div className="absolute w-4 h-4 bg-white dark:bg-background-dark border-4 border-[#AF52DE] rounded-full -left-[32px] top-1.5 z-10" />
+          <div className={`absolute w-0.5 h-full ${isLast ? 'bg-transparent' : 'bg-[#AF52DE]/20'} -left-[25px] top-4`} />
           
-          <h4 className="font-exrabold text-xl flex items-center mb-1 group-hover:text-primary transition-colors">
-            <TrainFront size={22} className="mr-3 text-primary animate-pulse"/>
+          <h4 className="font-exrabold text-xl flex items-center mb-1 text-[#AF52DE]">
+            <TrainFront size={22} className="mr-3 animate-pulse"/>
             {path.startName} 탑승
           </h4>
           
-          <div className="flex items-center space-x-2 mb-4">
-             <span className="text-[11px] font-black px-2.5 py-1 bg-primary/10 text-primary rounded-lg border border-primary/20">
-               {path.lane[0].name} ({path.lane[0].subwayCity})
+          <div className="flex items-center space-x-2 mb-3">
+             <span className="text-[10px] font-black px-2 py-0.5 bg-[#AF52DE]/10 text-[#AF52DE] rounded border border-[#AF52DE]/20">
+               {path.lane[0].name.replace('수도권 ', '')}
              </span>
              {fastDoor && (
-                <span className="text-[11px] font-black px-2.5 py-1 bg-[#7EE787]/10 text-[#54CC63] rounded-lg border border-[#7EE787]/20 flex items-center">
-                  ⚡ 빠른환승: {fastDoor}번 칸
+                <span className="text-[10px] font-black px-2 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">
+                  ⚡ {fastDoor}번 칸
                 </span>
              )}
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {arrivals.length > 0 ? (
-              arrivals.slice(0, 2).map((arrival: any, i: number) => (
-                <div key={i} className="bg-white dark:bg-white/5 p-4 rounded-3xl border border-border dark:border-white/5 shadow-sm">
+              arrivals.slice(0, 1).map((arrival: any, i: number) => (
+                <div key={i} className="bg-[#AF52DE]/5 p-3 rounded-2xl border border-[#AF52DE]/10">
                   <div className="flex justify-between items-center">
-                    <span className="text-[12px] font-black opacity-40 uppercase truncate max-w-[150px]">{arrival.trainLineNm}</span>
-                    <span className="text-[15px] font-black text-primary">{arrival.arvlMsg2}</span>
+                    <span className="text-[11px] font-black opacity-40 truncate">{arrival.trainLineNm}</span>
+                    <span className="text-[13px] font-black">{arrival.arvlMsg2}</span>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-xs font-bold opacity-30 italic pl-1">실시간 정보 조회 중...</p>
+              <p className="text-[10px] font-bold opacity-20 italic">Loading...</p>
             )}
-          </div>
-          
-          <div className="mt-4 flex items-center text-[13px] font-bold text-text-sub dark:text-text-sub-dark bg-black/5 dark:bg-white/5 w-fit px-4 py-1.5 rounded-full">
-            <Navigation size={12} className="mr-2" />
-            {path.stationCount}개 역 이동 ➔ {path.endName} 하차
           </div>
         </div>
       )
@@ -113,43 +108,37 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
     if (path.trafficType === 2) {
       const arrivals = realtimeData[`bus_${path.startArsID}`] || []
       const busNo = path.lane[0].busNo
-      // 특정 버스의 도착 정보만 필터링
       const myBusArrivals = arrivals.filter((a: any) => a.rtNm === busNo)
 
       return (
-        <div key={index} className="relative pb-12 pl-12 group">
-          <div className="absolute w-4 h-4 bg-white dark:bg-background-dark border-4 border-[#7EE787] rounded-full -left-[32px] top-1.5 z-10" />
-          <div className={`absolute w-0.5 h-full ${isLast ? 'bg-transparent' : 'bg-primary/20'} -left-[25px] top-4`} />
+        <div key={index} className="relative pb-10 pl-12 group">
+          <div className="absolute w-4 h-4 bg-white dark:bg-background-dark border-4 border-[#34C759] rounded-full -left-[32px] top-1.5 z-10" />
+          <div className={`absolute w-0.5 h-full ${isLast ? 'bg-transparent' : 'bg-[#34C759]/20'} -left-[25px] top-4`} />
 
-          <h4 className="font-extrabold text-xl flex items-center mb-1 group-hover:text-[#7EE787] transition-colors">
-            <Bus size={22} className="mr-3 text-[#7EE787]"/>
-            {path.startName} 승차
+          <h4 className="font-extrabold text-xl flex items-center mb-1 text-[#34C759]">
+            <Bus size={22} className="mr-3"/>
+            {path.startName}
           </h4>
 
-          <div className="flex items-center space-x-2 mb-4">
-            <span className="text-[11px] font-black px-3 py-1 bg-[#7EE787]/10 text-[#54CC63] rounded-lg border border-[#7EE787]/20">
+          <div className="flex items-center space-x-2 mb-3">
+            <span className="text-[10px] font-black px-2 py-0.5 bg-[#34C759]/10 text-[#34C759] rounded border border-[#34C759]/20 uppercase">
               {busNo}번 버스
             </span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {myBusArrivals.length > 0 ? (
-              myBusArrivals.map((arrival: any, i: number) => (
-                <div key={i} className="bg-white dark:bg-white/5 p-4 rounded-3xl border border-border dark:border-white/5 shadow-sm animate-in fade-in slide-in-from-right-2">
+              myBusArrivals.slice(0, 1).map((arrival: any, i: number) => (
+                <div key={i} className="bg-[#34C759]/5 p-3 rounded-2xl border border-[#34C759]/10">
                   <div className="flex justify-between items-center">
-                    <span className="text-[12px] font-black opacity-40 uppercase">실시간 도착</span>
-                    <span className="text-[15px] font-black text-[#54CC63]">{arrival.arrmsg1}</span>
+                    <span className="text-[11px] font-black opacity-40 uppercase">실시간</span>
+                    <span className="text-[13px] font-black">{arrival.arrmsg1}</span>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-xs font-bold opacity-30 italic pl-1">정류장 도착 정보가 없습니다.</p>
+              <p className="text-[10px] font-bold opacity-20 italic">Loading...</p>
             )}
-          </div>
-
-          <div className="mt-4 flex items-center text-[13px] font-bold text-text-sub dark:text-text-sub-dark bg-black/5 dark:bg-white/5 w-fit px-4 py-1.5 rounded-full">
-            <Navigation size={12} className="mr-2" />
-            {path.stationCount}개 정류장 ➔ {path.endName} 하차
           </div>
         </div>
       )
@@ -158,14 +147,10 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
     // 3. 도보 세그먼트
     if (path.trafficType === 3 && path.sectionTime > 0) {
       return (
-        <div key={index} className="relative pb-10 pl-12 group opacity-60 hover:opacity-100 transition-opacity">
+        <div key={index} className="relative pb-8 pl-12 group opacity-40">
           <div className="absolute w-2 h-2 bg-gray-400 rounded-full -left-[24px] top-2 z-10" />
-          <div className={`absolute w-0.5 h-full ${isLast ? 'bg-transparent' : 'bg-primary/10'} -left-[21px] top-4`} />
-          
-          <h4 className="font-bold text-[15px] flex items-center mb-1">
-            <PersonStanding size={18} className="mr-2.5 text-text-sub"/> 도보 이동
-          </h4>
-          <p className="text-sm font-black text-text-sub ml-1 tracking-tight">약 {path.sectionTime}분 걸어가기</p>
+          <div className={`absolute w-0.5 h-full ${isLast ? 'bg-transparent' : 'bg-border/20'} -left-[21px] top-4`} />
+          <p className="text-xs font-black">도보 {path.sectionTime}분</p>
         </div>
       )
     }
