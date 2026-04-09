@@ -21,22 +21,34 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
 
   const fetchAllRealtimeData = useCallback(async () => {
     setIsRefreshing(true)
-    const newData: Record<string, RealtimeResponse<any>> = { ...realtimeData }
-
-    for (const path of subPaths) {
-      if (path.trafficType === 1) { // 지하철
+    
+    // 개별 API 호출을 병렬로 처리하여 속도 개선
+    const promises = subPaths.map(async (path: any) => {
+      if (path.trafficType === 1) {
         const key = `subway_${path.startName}`
-        newData[key] = await getRealtimeSubway(path.startName)
-      } else if (path.trafficType === 2) { // 버스
+        const result = await getRealtimeSubway(path.startName)
+        return { key, result }
+      } else if (path.trafficType === 2) {
         const key = `bus_${path.startArsID}`
-        newData[key] = await getRealtimeBus(path.startArsID)
+        const result = await getRealtimeBus(path.startArsID)
+        return { key, result }
       }
-    }
+      return null
+    })
 
-    setRealtimeData(newData)
+    const results = await Promise.all(promises)
+    
+    setRealtimeData(prev => {
+      const next = { ...prev }
+      results.forEach(res => {
+        if (res) next[res.key] = res.result
+      })
+      return next
+    })
+
     setLastUpdated(new Date())
     setTimeout(() => setIsRefreshing(false), 800)
-  }, [subPaths, realtimeData])
+  }, [subPaths])
 
   useEffect(() => {
     if (isActive) {
