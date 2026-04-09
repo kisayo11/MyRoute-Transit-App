@@ -40,9 +40,14 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
     const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
+    const text = await response.text()
     
-    const data = await response.json()
+    // HTML 응답 방어 (SyntaxError 방지)
+    if (text.trim().startsWith('<!DOCTYPE')) {
+      return { ...emptyResponse, error: '서버 점검 중 (HTML 응답)' }
+    }
+
+    const data = JSON.parse(text)
     
     if (data.errorMessage?.status === 200 && Array.isArray(data.realtimeStationArrival)) {
       return {
@@ -61,12 +66,13 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     return { ...emptyResponse, error: data.errorMessage?.message || '실시간 정보가 없습니다.' }
   } catch (error: any) {
     console.error('Subway API Error:', error)
-    return { ...emptyResponse, error: error.message || '통신 장애가 발생했습니다.' }
+    return { ...emptyResponse, error: '데이터를 불러올 수 없습니다.' }
   }
 }
 
 /**
- * 서울 버스 실시간 도착 정보 (서울열린데이터광장)
+ * 서울 버스 실시간 도착 정보 (서울열린데이터광장 - 신규 엔드포인트)
+ * 주소: http://openapi.seoul.go.kr:8088/{key}/json/getArrInfoByStation/1/5/{arsId}
  */
 export async function getRealtimeBus(arsId: string): Promise<RealtimeResponse<BusArrival>> {
   const emptyResponse: RealtimeResponse<BusArrival> = { 
@@ -75,33 +81,43 @@ export async function getRealtimeBus(arsId: string): Promise<RealtimeResponse<Bu
 
   try {
     const cleanArsId = arsId.replace(/-/g, '')
-    const targetUrl = `http://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&arsId=${cleanArsId}&resultType=json`
+    // 서울 열린데이터 광장 공식 엔드포인트 (포지셔널 파라미터 방식)
+    const targetUrl = `http://openapi.seoul.go.kr:8088/${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}/json/getArrInfoByStation/1/5/${cleanArsId}`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
     const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
+    const text = await response.text()
+
+    if (text.trim().startsWith('<!DOCTYPE')) {
+      return { ...emptyResponse, error: '버스 API 서버 점검 중' }
+    }
+
+    const data = JSON.parse(text)
     
-    const data = await response.json()
-    
-    if (data.msgBody?.itemList) {
-      const itemList = Array.isArray(data.msgBody.itemList) ? data.msgBody.itemList : [data.msgBody.itemList]
+    // 서울시 API 응답 구조: { ServiceResult: { msgBody: { itemList: [...] } } } 또는 { getArrInfoByStation: { row: [...] } }
+    // 공통적으로 사용하는 getArrInfoByStation 구조 대응
+    const result = data.getArrInfoByStation || data.ServiceResult || {}
+    const items = result.row || (result.msgBody ? result.msgBody.itemList : null)
+
+    if (items) {
+      const itemList = Array.isArray(items) ? items : [items]
       return {
         success: true,
         data: itemList.map((item: any) => ({
-          rtNm: item.rtNm,
-          arrmsg1: item.arrmsg1,
-          arrmsg2: item.arrmsg2,
-          stNm: item.stNm,
-          adirection: item.adirection
+          rtNm: item.rtNm || item.RT_NM,
+          arrmsg1: item.arrmsg1 || item.ARV1 || '정보 없음',
+          arrmsg2: item.arrmsg2 || item.ARV2 || '',
+          stNm: item.stNm || item.ST_NM || '',
+          adirection: item.adirection || item.ADIRECTION || ''
         })),
         error: null,
         lastUpdated: new Date().toISOString()
       }
     }
     
-    return { ...emptyResponse, error: '도착 정보가 없습니다.' }
+    return { ...emptyResponse, error: '버스 도착 정보가 없습니다.' }
   } catch (error: any) {
     console.error('Bus API Error:', error)
-    return { ...emptyResponse, error: error.message || '통신 장애가 발생했습니다.' }
+    return { ...emptyResponse, error: '버스 정보를 불러올 수 없습니다.' }
   }
 }
