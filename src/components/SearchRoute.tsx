@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { searchPubTransPath, searchStation } from '../lib/odsay'
 import { supabase } from '../lib/supabase'
-import { ArrowLeft, Search, MapPin, TrainFront, PersonStanding } from 'lucide-react'
+import { ArrowLeft, Search, MapPin, TrainFront, PersonStanding, Bus } from 'lucide-react'
 
 export default function SearchRoute({ session, onBack, onRequestAuth }: { session: any, onBack: () => void, onRequestAuth: () => void }) {
   const [step, setStep] = useState<1 | 2>(1)
@@ -172,7 +172,12 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
                   {startResults.length > 0 && (
                     <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
                       {startResults.map((st, idx) => (
-                        <div key={idx} onClick={() => selectStation(st, 'start')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center"><MapPin size={14} className="text-primary mr-2" /> {st.stationName}</div>
+                        <div key={idx} onClick={() => selectStation(st, 'start')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center">
+                          {st.stationClass === 1 ? <TrainFront size={14} className="text-primary mr-2" /> : 
+                           st.stationClass === 2 ? <Bus size={14} className="text-[#34C759] mr-2" /> : 
+                           <MapPin size={14} className="text-primary mr-2" />} 
+                          {st.stationName}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -188,7 +193,12 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
                   {endResults.length > 0 && (
                     <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
                       {endResults.map((st, idx) => (
-                        <div key={idx} onClick={() => selectStation(st, 'end')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center"><MapPin size={14} className="text-primary mr-2" /> {st.stationName}</div>
+                        <div key={idx} onClick={() => selectStation(st, 'end')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center">
+                          {st.stationClass === 1 ? <TrainFront size={14} className="text-primary mr-2" /> : 
+                           st.stationClass === 2 ? <Bus size={14} className="text-[#34C759] mr-2" /> : 
+                           <MapPin size={14} className="text-primary mr-2" />} 
+                          {st.stationName}
+                        </div>
                       ))}
                     </div>
                   )}
