@@ -4,7 +4,7 @@ const PROXY_URL = 'https://api.allorigins.win/raw?url='
 export async function getRealtimeSubway(stationName: string) {
   try {
     const cleanName = stationName.replace(/역$/, '')
-    const targetUrl = `https://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
+    const targetUrl = `http://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
     // 프록시 사용 시 응답 속도를 고려하여 타임아웃을 8초로 상향
@@ -29,7 +29,7 @@ export async function getRealtimeSubway(stationName: string) {
 export async function getRealtimeBus(arsId: string) {
   try {
     const cleanArsId = arsId.replace(/-/g, '')
-    const targetUrl = `https://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&arsId=${cleanArsId}&resultType=json`
+    const targetUrl = `http://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&arsId=${cleanArsId}&resultType=json`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
     const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
