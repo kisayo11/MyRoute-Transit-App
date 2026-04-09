@@ -29,8 +29,9 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
         const result = await getRealtimeSubway(path.startName)
         return { key, result }
       } else if (path.trafficType === 2) {
-        const key = `bus_${path.startArsID}`
-        const result = await getRealtimeBus(path.startArsID)
+        // 버스는 9자리 고유 ID(startID)를 사용해야 국가 공공데이터 포털에서 찾을 수 있음
+        const key = `bus_${path.startID || path.startArsID}`
+        const result = await getRealtimeBus(path.startID || path.startArsID)
         return { key, result }
       }
       return null
@@ -126,7 +127,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
 
     // 버스 구간
     if (path.trafficType === 2) {
-      const resp = realtimeData[`bus_${path.startArsID}`]
+      const resp = realtimeData[`bus_${path.startID || path.startArsID}`]
       const busNo = path.lane[0].busNo
       const myBusArrivals = resp?.success ? resp.data.filter((a: BusArrival) => a.rtNm === busNo) : []
 

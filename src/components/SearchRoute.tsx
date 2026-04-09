@@ -37,16 +37,19 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
   }
 
   const selectStation = (station: any, type: 'start'|'end') => {
+    const stationData = { 
+      ...station, 
+      placeName: station.stationName,
+      stationID: station.stationID // 9자리 고유 ID 저장
+    }
     if (type === 'start') {
-      setStartStation({ ...station, placeName: station.stationName })
+      setStartStation(stationData)
       setStartQuery(station.stationName)
-      // 스마트 자동완성: 출발지 이름이 비어있으면 역 이름으로 자동 채움
       if (!startPlaceName) setStartPlaceName(station.stationName)
       setStartResults([])
     } else {
-      setEndStation({ ...station, placeName: station.stationName })
+      setEndStation(stationData)
       setEndQuery(station.stationName)
-      // 스마트 자동완성: 도착지 이름이 비어있으면 역 이름으로 자동 채움
       if (!endPlaceName) setEndPlaceName(station.stationName)
       setEndResults([])
     }
