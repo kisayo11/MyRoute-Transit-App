@@ -2,7 +2,6 @@ const PROXY_URL = 'https://api.allorigins.win/raw?url='
 
 /**
  * 전역 대중교통 데이터 응답 규격
- * 기술적 안정성을 위해 모든 API 반환값을 이 객체로 통일합니다.
  */
 export interface RealtimeResponse<T> {
   success: boolean;
@@ -27,6 +26,24 @@ export interface BusArrival {
 }
 
 /**
+ * 타임아웃 및 재시도 로직을 포함한 안전한 페처
+ */
+async function fetchWithRetry(url: string, timeout = 15000, retries = 1): Promise<string> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(timeout) });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return await response.text();
+    } catch (err: any) {
+      if (i === retries) throw err;
+      console.warn(`Retrying fetch (${i + 1}/${retries})...`, err.message);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기 후 재시도
+    }
+  }
+  throw new Error('Fetch failed after retries');
+}
+
+/**
  * 서울/수도권 지하철 실시간 도착 정보 (서울열린데이터광장)
  */
 export async function getRealtimeSubway(stationName: string): Promise<RealtimeResponse<SubwayArrival>> {
@@ -39,12 +56,11 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     const targetUrl = `http://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    const text = await response.text()
+    // 재시도 로직 및 15초 타임아웃 적용
+    const text = await fetchWithRetry(url, 15000, 1);
     
-    // HTML 응답 방어 (SyntaxError 방지)
     if (text.trim().startsWith('<!DOCTYPE')) {
-      return { ...emptyResponse, error: '서버 점검 중 (HTML 응답)' }
+      return { ...emptyResponse, error: '서버 응답 형식 오류 (HTML)' }
     }
 
     const data = JSON.parse(text)
@@ -63,16 +79,15 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
       }
     }
     
-    return { ...emptyResponse, error: data.errorMessage?.message || '실시간 정보가 없습니다.' }
+    return { ...emptyResponse, error: data.errorMessage?.message || '도착 예정 기차가 없습니다.' }
   } catch (error: any) {
-    console.error('Subway API Error:', error)
-    return { ...emptyResponse, error: '데이터를 불러올 수 없습니다.' }
+    const isTimeout = error.name === 'TimeoutError' || error.message?.includes('timeout');
+    return { ...emptyResponse, error: isTimeout ? '응답 지연 (서버 혼잡)' : '지하철 정보 수신 실패' }
   }
 }
 
 /**
- * 서울 버스 실시간 도착 정보 (서울열린데이터광장 - 신규 엔드포인트)
- * 주소: http://openapi.seoul.go.kr:8088/{key}/json/getArrInfoByStation/1/5/{arsId}
+ * 서울 버스 실시간 도착 정보 (서울열린데이터광장)
  */
 export async function getRealtimeBus(arsId: string): Promise<RealtimeResponse<BusArrival>> {
   const emptyResponse: RealtimeResponse<BusArrival> = { 
@@ -81,21 +96,16 @@ export async function getRealtimeBus(arsId: string): Promise<RealtimeResponse<Bu
 
   try {
     const cleanArsId = arsId.replace(/-/g, '')
-    // 서울 열린데이터 광장 공식 엔드포인트 (포지셔널 파라미터 방식)
     const targetUrl = `http://openapi.seoul.go.kr:8088/${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}/json/getArrInfoByStation/1/5/${cleanArsId}`
     const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    const text = await response.text()
+    const text = await fetchWithRetry(url, 15000, 1);
 
     if (text.trim().startsWith('<!DOCTYPE')) {
-      return { ...emptyResponse, error: '버스 API 서버 점검 중' }
+      return { ...emptyResponse, error: '서버 응답 형식 오류 (HTML)' }
     }
 
     const data = JSON.parse(text)
-    
-    // 서울시 API 응답 구조: { ServiceResult: { msgBody: { itemList: [...] } } } 또는 { getArrInfoByStation: { row: [...] } }
-    // 공통적으로 사용하는 getArrInfoByStation 구조 대응
     const result = data.getArrInfoByStation || data.ServiceResult || {}
     const items = result.row || (result.msgBody ? result.msgBody.itemList : null)
 
@@ -115,9 +125,9 @@ export async function getRealtimeBus(arsId: string): Promise<RealtimeResponse<Bu
       }
     }
     
-    return { ...emptyResponse, error: '버스 도착 정보가 없습니다.' }
+    return { ...emptyResponse, error: '도착 정보가 없습니다.' }
   } catch (error: any) {
-    console.error('Bus API Error:', error)
-    return { ...emptyResponse, error: '버스 정보를 불러올 수 없습니다.' }
+    const isTimeout = error.name === 'TimeoutError' || error.message?.includes('timeout');
+    return { ...emptyResponse, error: isTimeout ? '응답 지연 (서버 혼잡)' : '버스 정보 수신 실패' }
   }
 }
