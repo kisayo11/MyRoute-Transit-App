@@ -1,11 +1,14 @@
-// 서울/수도권 지하철 실시간 도착 정보 (서울열린데이터광장 - sample 키 사용)
+const PROXY_URL = 'https://api.allorigins.win/raw?url='
+
+// 서울/수도권 지하철 실시간 도착 정보 (서울열린데이터광장 - 개인 인증키 사용)
 export async function getRealtimeSubway(stationName: string) {
   try {
-    // "역" 자가 붙어있으면 제거 (예: 구의역 -> 구의)
     const cleanName = stationName.replace(/역$/, '')
-    const url = `https://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
+    const targetUrl = `https://swopenapi.seoul.go.kr/api/subway/${import.meta.env.VITE_SEOUL_SUBWAY_KEY || 'sample'}/json/realtimeStationArrival/0/5/${encodeURIComponent(cleanName)}`
+    const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const response = await fetch(url, { signal: AbortSignal.timeout(5000) }) // 5초 타임아웃
+    // 프록시 사용 시 응답 속도를 고려하여 타임아웃을 8초로 상향
+    const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
     const data = await response.json()
     
     if (data.errorMessage?.status === 200 && data.realtimeStationArrival) {
@@ -16,19 +19,20 @@ export async function getRealtimeSubway(stationName: string) {
         updnLine: item.updnLine
       }))
     }
-    return [] // 데이터 없음
+    return []
   } catch (error) {
-    return 'ERROR' // 에러 발생 상태
+    return 'ERROR'
   }
 }
 
-// 서울 버스 실시간 도착 정보 (서울열린데이터광장 - sample 키 사용)
+// 서울 버스 실시간 도착 정보 (서울열린데이터광장 - 개인 인증키 사용)
 export async function getRealtimeBus(arsId: string) {
   try {
     const cleanArsId = arsId.replace(/-/g, '')
-    const url = `https://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&arsId=${cleanArsId}&resultType=json`
+    const targetUrl = `https://ws.bus.go.kr/api/rest/arrive/getArriveReturnJson?ServiceKey=${import.meta.env.VITE_SEOUL_BUS_KEY || 'sample'}&arsId=${cleanArsId}&resultType=json`
+    const url = `${PROXY_URL}${encodeURIComponent(targetUrl)}`
     
-    const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
     const data = await response.json()
     
     if (data.msgBody?.itemList) {
