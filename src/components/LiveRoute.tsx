@@ -22,10 +22,10 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
     for (const path of subPaths) {
       if (path.trafficType === 1) { // 지하철
         const data = await getRealtimeSubway(path.startName)
-        if (data) newData[`subway_${path.startName}`] = data
+        newData[`subway_${path.startName}`] = data
       } else if (path.trafficType === 2) { // 버스
         const data = await getRealtimeBus(path.startArsID)
-        if (data) newData[`bus_${path.startArsID}`] = data
+        newData[`bus_${path.startArsID}`] = data
       }
     }
 
@@ -79,7 +79,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
              <span className="text-[10px] font-black px-2 py-0.5 bg-[#AF52DE]/10 text-[#AF52DE] rounded border border-[#AF52DE]/20">
                {path.lane[0].name.replace('수도권 ', '')}
              </span>
-             {fastDoor && (
+             {fastDoor && fastDoor !== 'null' && (
                 <span className="text-[10px] font-black px-2 py-0.5 bg-primary/10 text-primary rounded border border-primary/20">
                   ⚡ {fastDoor}번 칸
                 </span>
@@ -87,7 +87,9 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
           </div>
 
           <div className="space-y-2">
-            {arrivals.length > 0 ? (
+            {arrivals === 'ERROR' ? (
+              <p className="text-[10px] font-bold text-red-400 opacity-60 italic">정보 없음 (API 키 확인)</p>
+            ) : Array.isArray(arrivals) && arrivals.length > 0 ? (
               arrivals.slice(0, 1).map((arrival: any, i: number) => (
                 <div key={i} className="bg-[#AF52DE]/5 p-3 rounded-2xl border border-[#AF52DE]/10">
                   <div className="flex justify-between items-center">
@@ -96,8 +98,10 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
                   </div>
                 </div>
               ))
-            ) : (
+            ) : arrivals === 'LOADING' || !lastUpdated ? (
               <p className="text-[10px] font-bold opacity-20 italic">Loading...</p>
+            ) : (
+              <p className="text-[10px] font-bold opacity-40">최근 도착 정보가 없습니다.</p>
             )}
           </div>
         </div>
@@ -127,7 +131,9 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
           </div>
 
           <div className="space-y-2">
-            {myBusArrivals.length > 0 ? (
+            {arrivals === 'ERROR' ? (
+              <p className="text-[10px] font-bold text-red-400 opacity-60 italic">정보 없음 (API 키 확인)</p>
+            ) : Array.isArray(myBusArrivals) && myBusArrivals.length > 0 ? (
               myBusArrivals.slice(0, 1).map((arrival: any, i: number) => (
                 <div key={i} className="bg-[#34C759]/5 p-3 rounded-2xl border border-[#34C759]/10">
                   <div className="flex justify-between items-center">
@@ -136,8 +142,10 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
                   </div>
                 </div>
               ))
-            ) : (
+            ) : arrivals === 'LOADING' || !lastUpdated ? (
               <p className="text-[10px] font-bold opacity-20 italic">Loading...</p>
+            ) : (
+              <p className="text-[10px] font-bold opacity-40">정보 없음</p>
             )}
           </div>
         </div>
