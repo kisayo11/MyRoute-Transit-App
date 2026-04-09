@@ -19,12 +19,12 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/vite.svg', // TODO: 임시 Vite 아이콘 사용, 나중에 교체 필요
+            src: 'favicon.svg',
             sizes: '192x192',
             type: 'image/svg+xml'
           },
           {
-            src: '/vite.svg',
+            src: 'favicon.svg',
             sizes: '512x512',
             type: 'image/svg+xml'
           }
