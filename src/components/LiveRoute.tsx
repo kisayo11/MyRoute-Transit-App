@@ -112,7 +112,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
     if (path.trafficType === 2) {
       const arrivals = realtimeData[`bus_${path.startArsID}`] || []
       const busNo = path.lane[0].busNo
-      const myBusArrivals = arrivals.filter((a: any) => a.rtNm === busNo)
+      const myBusArrivals = Array.isArray(arrivals) ? arrivals.filter((a: any) => a.rtNm === busNo) : []
 
       return (
         <div key={index} className="relative pb-10 pl-12 group">
