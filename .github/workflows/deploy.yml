@@ -28,7 +28,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install # package-lock.json이 버전 변경으로 인해 꼬였을 수 있으므로 install 사용
+        run: npm ci
 
       - name: Build
         run: npm run build
@@ -38,6 +38,24 @@ jobs:
           VITE_ODSAY_API_KEY: ${{ secrets.VITE_ODSAY_API_KEY }}
           VITE_SEOUL_SUBWAY_KEY: ${{ secrets.VITE_SEOUL_SUBWAY_KEY }}
           VITE_SEOUL_BUS_KEY: ${{ secrets.VITE_SEOUL_BUS_KEY }}
+
+      - name: Sanity Check (Verification)
+        run: |
+          echo "Checking if index.html was generated correctly..."
+          if [ ! -f dist/index.html ]; then
+            echo "Error: dist/index.html not found!"
+            exit 1
+          fi
+          
+          echo "Checking if asset paths are correctly resolved..."
+          grep -q "assets/" dist/index.html || { echo "Warning: assets/ path not found in index.html. Checking build structure..."; ls -R dist; }
+          
+          if [ -f dist/.nojekyll ]; then
+            echo ".nojekyll found in dist root. OK."
+          else
+            echo "Adding .nojekyll to dist root..."
+            touch dist/.nojekyll
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
