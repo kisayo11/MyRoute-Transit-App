@@ -2,9 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// GitHub Pages 배포용으로 롤백 (Vercel에서는 호스트에서 corsproxy를 차단함)
+// Vercel 호스팅용으로 전환 (base 경로를 루트로 설정)
 export default defineConfig({
-  base: '/MyRoute-Transit-App/',
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),

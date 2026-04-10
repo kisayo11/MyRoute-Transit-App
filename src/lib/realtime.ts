@@ -7,8 +7,7 @@
  * 프록시: CORS 우회 (corsproxy.io가 allorigins보다 훨씬 안정적)
  */
 
-const PROXY = 'https://corsproxy.io/?'
-
+// Vercel 자체 API 터널 사용 (/api/proxy)
 // ===================== 타입 정의 =====================
 
 export interface RealtimeResult<T> {
@@ -43,7 +42,10 @@ async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
     : `${targetUrl}?${cacheBuster}`
 
   const encodedTarget = encodeURIComponent(targetWithCacheBuster)
-  const url = PROXY + encodedTarget
+  
+  // Vercel 자체 API 터널 사용
+  const url = `/api/proxy?url=${encodedTarget}`
+  
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   
@@ -64,7 +66,7 @@ async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
         const errorJson = await res.json()
         if (errorJson.error) errorMsg += ` (${errorJson.error})`
       } catch (e) {
-        // ignore JSON parse error for error body
+        // ignore
       }
       throw new Error(errorMsg)
     }
