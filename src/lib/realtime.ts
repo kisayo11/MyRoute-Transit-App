@@ -1,13 +1,13 @@
 /**
  * MyRoute 실시간 대중교통 API
  * 
- * 지하철: 서울 열린데이터 광장 (swopenapi.seoul.go.kr) → 테스트 완료 ✅
- * 버스:   국가공공데이터포털 (ws.bus.go.kr) — data.go.kr 키 사용 ✅
+ * 지하철: 서울 열린데이터 광장 (swopenapi.seoul.go.kr)
+ * 버스:   국가공공데이터포털 (ws.bus.go.kr)
  * 
- * 프록시: CORS 우회를 위해 allorigins.win 사용
+ * 프록시: CORS 우회 (corsproxy.io가 allorigins보다 훨씬 안정적)
  */
 
-const PROXY = 'https://api.allorigins.win/raw?url='
+const PROXY = 'https://corsproxy.io/?'
 
 // ===================== 타입 정의 =====================
 
@@ -75,11 +75,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
   const cleanName = stationName.trim().replace(/역$/, '')
 
   try {
-    // allorigins 프록시는 URL 파라미터를 한 번 디코딩한 뒤 요청을 보냅니다.
-    // 만약 한글이 평문으로 남아있으면 프록시 내부의 HTTP 클라이언트에서 400 에러가 발생합니다.
-    // 따라서 역 이름을 여기서 한 번 인코딩하고, proxyFetch에서 전체를 인코딩하여 '더블 인코딩' 효과를 줍니다.
-    const encodedName = encodeURIComponent(cleanName)
-    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodedName}`
+    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${cleanName}`
     const data = await proxyFetch(baseUrl)
 
     // 서울시 API 특정 오류 메시지 체크

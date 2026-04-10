@@ -21,8 +21,8 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
         const key = `subway_${path.startName}`
         results[key] = await getRealtimeSubway(path.startName)
       } else if (path.trafficType === 2) {
-        // 버스 — startID (9자리 ODsay 고유 ID) 우선 사용
-        const stId = path.startID || path.startArsID
+        // 버스 — startLocalStationID (표준 9자리) 최우선 사용, 그 다음 ARS ID
+        const stId = path.startLocalStationID || path.startArsID || path.startID
         if (stId) {
           const key = `bus_${stId}`
           results[key] = await getRealtimeBus(String(stId))
@@ -102,7 +102,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
 
     // 버스
     if (path.trafficType === 2) {
-      const stId = path.startID || path.startArsID
+      const stId = path.startLocalStationID || path.startArsID || path.startID
       const key = `bus_${stId}`
       const result = realtimeData[key]
       const busNo = path.lane?.[0]?.busNo || '버스'
