@@ -1,9 +1,0 @@
-{
-  "regions": ["icn1"],
-  "functions": {
-    "api/**/*.ts": {
-      "region": "icn1",
-      "maxDuration": 15
-    }
-  }
-}
