@@ -7,8 +7,7 @@
  * 프록시: CORS 우회 (corsproxy.io가 allorigins보다 훨씬 안정적)
  */
 
-const PROXY = 'https://corsproxy.io/?'
-
+// 10: const PROXY = 'https://corsproxy.io/?' (Removed)
 // ===================== 타입 정의 =====================
 
 export interface RealtimeResult<T> {
@@ -36,14 +35,19 @@ export interface BusArrival {
 // ===================== 공통 유틸 =====================
 
 async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
-  // 브라우저 및 프록시 서버의 캐싱을 완전히 막기 위해 고유 타임스탬프 추가
+  // API 캐싱 방지용
   const cacheBuster = `_t=${Date.now()}`
   const targetWithCacheBuster = targetUrl.includes('?') 
     ? `${targetUrl}&${cacheBuster}` 
     : `${targetUrl}?${cacheBuster}`
-
+  
   const encodedTarget = encodeURIComponent(targetWithCacheBuster)
-  const url = PROXY + encodedTarget
+  const IS_PROD = import.meta.env.PROD
+  const LOCAL_PROXY = 'https://corsproxy.io/?'
+  const VERCEL_API = '/api/proxy?url='
+  
+  const baseProxyUrl = IS_PROD ? VERCEL_API : LOCAL_PROXY
+  const url = baseProxyUrl + encodedTarget
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   
