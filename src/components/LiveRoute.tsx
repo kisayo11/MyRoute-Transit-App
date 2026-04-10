@@ -96,13 +96,17 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
                 6: '1006', 7: '1007', 8: '1008', 9: '1009',
                 104: '1063', 108: '1065', 109: '1077', 116: '1075', 113: '1092'
               };
-              const mySubwayId = path.lane?.[0]?.subwayCode ? codeToId[path.lane[0].subwayCode] : '';
               
+              // 텍스트 매치로 호선 ID 보험 삼기
+              const fallbackLineMatch = lineName.match(/(\d+)호선/);
+              const fallbackCode = fallbackLineMatch ? Number(fallbackLineMatch[1]) : 0;
+              const rawSubwayCode = path.lane?.[0]?.subwayCode || fallbackCode;
+              const mySubwayId = rawSubwayCode ? codeToId[rawSubwayCode] : '';
+
               const filtered = result.data.filter((a: SubwayArrival) => {
-                // 환승역에서 다른 호선 열차 필터링
-                if (mySubwayId && a.subwayId && a.subwayId !== mySubwayId) return false;
+                // 환승역에서 다른 호선 열차 필터링 완전 차단
+                if (mySubwayId && a.subwayId && String(a.subwayId) !== String(mySubwayId)) return false;
                 
-                if (!path.wayCode) return true; // wayCode 없으면 호선만 맞으면 전부 표시
                 const isLine2 = a.subwayId === '1002'; // 서울시 2호선 ID
 
                 if (wantUp) {
@@ -115,19 +119,31 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
                   if (isLine2 && (a.updnLine === '내선' || a.updnLine === '하행')) return true;
                   if (!isLine2 && (a.updnLine === '하행' || a.updnLine === '외선')) return true;
                 }
+                
+                // wayCode가 DB에 없어서 판별이 안 되는 경우만 통과시킴
+                if (!path.wayCode) return true; 
+
                 return false;
               });
 
-              if (filtered.length === 0) {
-                return <p className="text-xs text-gray-400">현재 해당 방향 도착 예정 열차 없음</p>;
-              }
-
-              return filtered.slice(0, 2).map((a: SubwayArrival, i: number) => (
-                <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-2 pt-2 border-t border-purple-100 dark:border-purple-900/30' : ''}`}>
-                  <span className="text-xs text-gray-500 truncate pr-2">{a.trainLineNm}</span>
-                  <span className="text-sm font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">{a.arvlMsg2}</span>
-                </div>
-              ));
+              return (
+                <>
+                  <div className="text-[9px] text-gray-500 mb-2 leading-tight opacity-70">
+                    [Debug] mySubwayId:{mySubwayId}, wayCode:{path.wayCode}, way:{path.way}<br/>
+                    {result.data.map((a: SubwayArrival, i: number) => `(${a.subwayId}/${a.updnLine}/${a.trainLineNm}) `)}
+                  </div>
+                  {filtered.length === 0 ? (
+                    <p className="text-xs text-gray-400">현재 해당 방향 도착 예정 열차 없음 (필터 차단됨)</p>
+                  ) : (
+                    filtered.slice(0, 2).map((a: SubwayArrival, i: number) => (
+                      <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-2 pt-2 border-t border-purple-100 dark:border-purple-900/30' : ''}`}>
+                        <span className="text-xs text-gray-500 truncate pr-2">{a.trainLineNm}</span>
+                        <span className="text-sm font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">{a.arvlMsg2}</span>
+                      </div>
+                    ))
+                  )}
+                </>
+              );
             })()}
           </div>
         </div>
