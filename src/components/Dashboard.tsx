@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { LogOut, Plus, Trash2, ChevronRight, TrainFront, Bus, Loader2 } from 'lucide-react'
+import { LogOut, Plus, Trash2, Edit3, ChevronRight, TrainFront, Bus, Loader2 } from 'lucide-react'
 
-export default function Dashboard({ session, onGoSearch, onGoLive, onRequestAuth }: {
+export default function Dashboard({ session, onGoSearch, onGoLive, onEdit, onRequestAuth }: {
   session: any
   onGoSearch: () => void
   onGoLive: (route: any) => void
+  onEdit: (route: any) => void
   onRequestAuth: () => void
 }) {
   const [routes, setRoutes] = useState<any[]>([])
@@ -28,6 +29,11 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onRequestAuth
     if (!confirm('이 경로를 삭제할까요?')) return
     const { error } = await supabase.from('routes').delete().eq('id', id)
     if (!error) setRoutes(routes.filter(r => r.id !== id))
+  }
+
+  const handleEdit = (e: React.MouseEvent, route: any) => {
+    e.stopPropagation()
+    onEdit(route)
   }
 
   useEffect(() => { fetchRoutes() }, [session])
@@ -94,22 +100,30 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onRequestAuth
                 <div
                   key={r.id}
                   onClick={() => onGoLive(r)}
-                  className="relative p-5 bg-white dark:bg-[#1a1b22] border border-gray-100 dark:border-white/5 rounded-2xl shadow-sm hover:border-primary/40 hover:shadow-md cursor-pointer transition-all"
+                  className="relative p-5 bg-white dark:bg-[#1a1b22] border border-gray-100 dark:border-white/5 rounded-2xl shadow-sm hover:border-primary/40 hover:shadow-md cursor-pointer transition-all group"
                 >
-                  {/* 경로 이름 + 삭제 */}
+                  {/* 경로 이름 + 수정/삭제 */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 pr-3">
-                      <h3 className="font-black text-base leading-tight truncate">{r.route_name || r.name || '이름 없음'}</h3>
+                      <h3 className="font-black text-base leading-tight truncate group-hover:text-primary transition-colors">{r.route_name || r.name || '이름 없음'}</h3>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {r.start_place || r.start_point?.nickname || r.start_point?.stationName || ''} → {r.end_place || r.end_point?.nickname || r.end_point?.stationName || ''}
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => handleDelete(e, r.id)}
-                      className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => handleEdit(e, r)}
+                        className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(e, r.id)}
+                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* 노선 뱃지 */}
@@ -134,7 +148,7 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onRequestAuth
                       <span className="text-3xl font-black text-primary tracking-tight">{totalMins}</span>
                       <span className="text-xs font-semibold text-gray-400">분</span>
                     </div>
-                    <ChevronRight size={18} className="text-gray-300" />
+                    <ChevronRight size={18} className="text-gray-300 group-hover:text-primary transition-colors group-hover:translate-x-1" />
                   </div>
                 </div>
               )

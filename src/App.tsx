@@ -4,13 +4,15 @@ import Auth from './components/Auth'
 import Dashboard from './components/Dashboard'
 import SearchRoute from './components/SearchRoute'
 import LiveRoute from './components/LiveRoute'
+import EditRoute from './components/EditRoute'
 
 function App() {
   const [session, setSession] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [view, setView] = useState<'home' | 'search' | 'live'>('home')
+  const [view, setView] = useState<'home' | 'search' | 'live' | 'edit'>('home')
   const [currentLiveRoute, setCurrentLiveRoute] = useState<any>(null)
+  const [editingRoute, setEditingRoute] = useState<any>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
@@ -65,11 +67,18 @@ function App() {
           onBack={() => setView('home')} 
           onRequestAuth={() => setShowAuthModal(true)} 
         />
+      ) : view === 'edit' && editingRoute ? (
+        <EditRoute
+          route={editingRoute}
+          onBack={() => setView('home')}
+          onSuccess={() => setView('home')}
+        />
       ) : (
         <Dashboard 
           session={session} 
           onGoSearch={() => setView('search')} 
           onGoLive={(route) => { setCurrentLiveRoute(route); setView('live'); }}
+          onEdit={(route) => { setEditingRoute(route); setView('edit'); }}
           onRequestAuth={() => setShowAuthModal(true)} 
         />
       )}
