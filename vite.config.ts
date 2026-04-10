@@ -2,9 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// Vercel 호스팅용으로 전환 (base 경로를 루트로 설정)
+// Vercel/GitHub Pages 공용 호환을 위한 상대 경로 설정
 export default defineConfig({
-  base: '/',
+  base: './',
   plugins: [
     react(),
     tailwindcss(),
