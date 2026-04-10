@@ -2,10 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-// GitHub Pages용 최적화 설정 (v1.1.0)
-// 모든 PWA 및 서비스 워커 관련 로직을 제거하여 MIME 에러를 방지합니다.
+// Vercel 호스팅용으로 전환 (기존 GitHub Pages용 base 경로 제거)
 export default defineConfig({
-  base: '/MyRoute-Transit-App/',
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
