@@ -35,6 +35,9 @@ export interface BusArrival {
 // ===================== 공통 유틸 =====================
 
 async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
+  // 역명 등 한글이 포함된 URL을 한 번만 인코딩하여 프록시에 전달
+  // encodeURIComponent(targetUrl) 하면 이중 인코딩 발생 → 빈 결과 반환
+  // allorigins.win은 url 파라미터를 그대로 서버에 전달하므로 한 번만 인코딩하면 됨
   const url = PROXY + encodeURIComponent(targetUrl)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -70,7 +73,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
   const name = stationName.replace(/역$/, '')
 
   try {
-    const url = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodeURIComponent(name)}`
+    const url = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${name}`
     const data = await proxyFetch(url)
 
     // 성공 판정: status 200 or code INFO-000
