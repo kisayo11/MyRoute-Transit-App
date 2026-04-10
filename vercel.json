@@ -5,7 +5,6 @@
   ],
   "functions": {
     "api/**/*.ts": {
-      "region": "icn1",
       "maxDuration": 15
     }
   }
