@@ -128,10 +128,6 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
 
               return (
                 <>
-                  <div className="text-[9px] text-gray-500 mb-2 leading-tight opacity-70">
-                    [Debug] mySubwayId:{mySubwayId}, wayCode:{path.wayCode}, way:{path.way}<br/>
-                    {result.data.map((a: SubwayArrival, i: number) => `(${a.subwayId}/${a.updnLine}/${a.trainLineNm}) `)}
-                  </div>
                   {filtered.length === 0 ? (
                     <p className="text-xs text-gray-400">현재 해당 방향 도착 예정 열차 없음 (필터 차단됨)</p>
                   ) : (
