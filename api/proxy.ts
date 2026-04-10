@@ -18,13 +18,15 @@ export default async function handler(req, res) {
     const targetUrl = decodeURIComponent(url as string);
     console.log('Target URL:', targetUrl);
 
-    // 서울시 API는 브라우저 User-Agent가 없으면 차단하는 경우가 있음
+    // 서울시 및 ODsay API의 도메인/보안 차단 회피를 위한 헤더 구성
     const apiResponse = await fetch(targetUrl, {
       method: 'GET',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer': (req.headers.referer as string) || 'https://my-route-transit-app.vercel.app/',
+        'Origin': (req.headers.origin as string) || 'https://my-route-transit-app.vercel.app/'
       }
     });
 
