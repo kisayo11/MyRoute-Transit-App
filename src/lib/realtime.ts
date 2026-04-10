@@ -86,20 +86,49 @@ async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
 
 // ===================== 지하철 API =====================
 
+// 서울시 API 특성상 공식 명칭이 아니면 에러가 나는 역들을 위한 매핑 테이블
+const STATION_NAME_FIXES: Record<string, string> = {
+  '어린이대공원': '어린이대공원(세종대)',
+  '숭실대입구': '숭실대입구(살피재)',
+  '총신대입구': '총신대입구(이수)',
+  '이수': '총신대입구(이수)',
+  '상도': '상도(중앙대앞)',
+  '충정로': '충정로(경기대입구)',
+  '남한산성입구': '남한산성입구(성남법원·검찰청)',
+  '대림': '대림(구로구청)',
+  '증산': '증산(명지대앞)',
+  '군자': '군자(능동)',
+}
+
 export async function getRealtimeSubway(stationName: string): Promise<RealtimeResult<SubwayArrival>> {
   const key = import.meta.env.VITE_PUBLIC_SUBWAY_API_KEY
   
   if (!key) return { ok: false, data: [], error: '지하철 인증키 누락' }
   if (!stationName) return { ok: false, data: [], error: '역 이름 누락' }
 
-  // "구의역" -> "구의" 정규화
-  const cleanName = stationName.trim().replace(/역$/, '')
+  // 1단계: 이름 정규화 (끝에 '역' 제거)
+  let cleanName = stationName.trim().replace(/역$/, '')
+  
+  // 2단계: 매핑 테이블 확인
+  if (STATION_NAME_FIXES[cleanName]) {
+    cleanName = STATION_NAME_FIXES[cleanName]
+  }
 
   try {
-    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${cleanName}`
-    const data = await proxyFetch(baseUrl)
+    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodeURIComponent(cleanName)}`
+    let data = await proxyFetch(baseUrl)
 
-    // 서울시 API 특정 오류 메시지 체크
+    // 만약 데이터가 없거나 에러가 났다면, 괄호를 제거하고 한 번 더 시도 (역방향 시도)
+    if ((!data.realtimeArrivalList || data.realtimeArrivalList.length === 0) && cleanName.includes('(')) {
+      const fallbackName = cleanName.split('(')[0]
+      const fallbackUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodeURIComponent(fallbackName)}`
+      const fallbackData = await proxyFetch(fallbackUrl)
+      if (fallbackData.realtimeArrivalList?.length > 0) {
+        data = fallbackData
+      }
+    }
+
+    // 최종 결과 체크
     if (data.errorMessage?.status !== 200 && data.errorMessage?.code !== 'INFO-000') {
       return { 
         ok: false, 
