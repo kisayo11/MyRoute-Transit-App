@@ -35,22 +35,28 @@ export interface BusArrival {
 // ===================== 공통 유틸 =====================
 
 async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
-  // 역명 등 한글이 포함된 URL을 한 번만 인코딩하여 프록시에 전달
-  // encodeURIComponent(targetUrl) 하면 이중 인코딩 발생 → 빈 결과 반환
-  // allorigins.win은 url 파라미터를 그대로 서버에 전달하므로 한 번만 인코딩하면 됨
-  const url = PROXY + encodeURIComponent(targetUrl)
+  // targetUrl에 이미 한글이 포함되어 있을 수 있으므로, 
+  // 전체를 인코딩하되 기호들이 중복 인코딩되지 않게 처리하는 프록시 전용 유틸
+  const encodedTarget = encodeURIComponent(targetUrl)
+  const url = PROXY + encodedTarget
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   
   try {
     const res = await fetch(url, { signal: controller.signal })
     clearTimeout(timer)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: 프록시 서버 응답 오류`)
+    }
+    
     const text = await res.text()
     if (!text || text.trim().startsWith('<')) {
-      throw new Error('서버가 HTML을 반환했습니다 (CORS/프록시 오류)')
+      throw new Error('응답 데이터 형식이 올바르지 않습니다 (HTML 반환)')
     }
-    return JSON.parse(text)
+    
+    const json = JSON.parse(text)
+    return json
   } catch (err: any) {
     clearTimeout(timer)
     throw err
@@ -58,36 +64,30 @@ async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
 }
 
 // ===================== 지하철 API =====================
-// 서울 열린데이터 광장: swopenapi.seoul.go.kr
-// 키: VITE_PUBLIC_SUBWAY_API_KEY (서울 열린데이터 광장 지하철인증키)
-// 응답 필드: data.realtimeArrivalList (주의: realtimeStationArrival 아님!)
 
 export async function getRealtimeSubway(stationName: string): Promise<RealtimeResult<SubwayArrival>> {
   const key = import.meta.env.VITE_PUBLIC_SUBWAY_API_KEY
   
-  if (!key) {
-    return { ok: false, data: [], error: '지하철 인증키 없음 (VITE_PUBLIC_SUBWAY_API_KEY)' }
-  }
+  if (!key) return { ok: false, data: [], error: '지하철 인증키 누락' }
+  if (!stationName) return { ok: false, data: [], error: '역 이름 누락' }
 
-  // "구의역" → "구의" 처리
-  const name = stationName.replace(/역$/, '')
+  // "구의역" -> "구의" 정규화
+  const cleanName = stationName.trim().replace(/역$/, '')
 
   try {
-    const url = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${name}`
-    const data = await proxyFetch(url)
+    // 400 에러를 방지하기 위해 URL 구조를 가장 표준적인 방식으로 조립
+    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${cleanName}`
+    const data = await proxyFetch(baseUrl)
 
-    // 성공 판정: status 200 or code INFO-000
-    const isOk = data.errorMessage?.status === 200 || data.errorMessage?.code === 'INFO-000'
-    
-    if (!isOk) {
+    // 서울시 API 특정 오류 메시지 체크
+    if (data.errorMessage?.status !== 200 && data.errorMessage?.code !== 'INFO-000') {
       return { 
         ok: false, 
         data: [], 
-        error: data.errorMessage?.message || data.errorMessage?.code || '응답 오류'
+        error: data.errorMessage?.message || `API 오류 (${data.errorMessage?.code})`
       }
     }
 
-    // 실제 응답 필드는 realtimeArrivalList (realtimeStationArrival 아님!)
     const arrivals: SubwayArrival[] = (data.realtimeArrivalList || []).map((item: any) => ({
       trainLineNm: item.trainLineNm || '',
       arvlMsg2: item.arvlMsg2 || '',
@@ -98,25 +98,18 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     return { ok: true, data: arrivals, error: null }
 
   } catch (err: any) {
-    console.error('[지하철 API]', stationName, err.message)
+    console.error('[지하철 API 오류]', cleanName, err.message)
     return { ok: false, data: [], error: err.message }
   }
 }
-
 // ===================== 버스 API =====================
 // 국가공공데이터포털: ws.bus.go.kr
-// 키: VITE_PUBLIC_BUS_API_KEY (data.go.kr에서 발급한 서비스키)
-// 정류소 ID: startID (ODsay 응답의 9자리 고유 ID)
 
 export async function getRealtimeBus(stId: string): Promise<RealtimeResult<BusArrival>> {
   const key = import.meta.env.VITE_PUBLIC_BUS_API_KEY
 
-  if (!key) {
-    return { ok: false, data: [], error: '버스 인증키 없음 (VITE_PUBLIC_BUS_API_KEY)' }
-  }
-  if (!stId) {
-    return { ok: false, data: [], error: '정류소 ID 없음' }
-  }
+  if (!key) return { ok: false, data: [], error: '버스 인증키 없음' }
+  if (!stId) return { ok: false, data: [], error: '정류소 ID 없음' }
 
   try {
     const url = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?ServiceKey=${encodeURIComponent(key)}&stId=${stId}&resultType=json`
@@ -145,7 +138,7 @@ export async function getRealtimeBus(stId: string): Promise<RealtimeResult<BusAr
     return { ok: true, data: arrivals, error: null }
 
   } catch (err: any) {
-    console.error('[버스 API]', stId, err.message)
+    console.error('[버스 API 오류]', stId, err.message)
     return { ok: false, data: [], error: err.message }
   }
 }

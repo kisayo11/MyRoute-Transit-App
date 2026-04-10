@@ -158,12 +158,12 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
       {/* 헤더 */}
       <div className="mb-8">
         <h2 className="text-2xl font-black tracking-tight flex items-center flex-wrap gap-2">
-          {route.start_place}
+          {route.start_place || route.start_point?.nickname || route.start_point?.stationName || '출발'}
           <ChevronRight size={18} className="text-gray-300" />
-          {route.end_place}
+          {route.end_place || route.end_point?.nickname || route.end_point?.stationName || '도착'}
         </h2>
         <div className="flex items-center gap-3 mt-2">
-          <span className="text-sm font-semibold text-gray-400">{route.route_name}</span>
+          <span className="text-sm font-semibold text-gray-400">{route.route_name || route.name || '이름 없는 경로'}</span>
           {lastUpdated && (
             <span className="text-xs text-gray-400 flex items-center gap-1">
               <Clock size={10} />
@@ -213,7 +213,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
               <MapPin size={14} className="text-white" />
             </div>
             <div className="absolute w-px h-full bg-gradient-to-b from-primary to-primary/20 -left-[23px] top-7" />
-            <h4 className="font-bold text-lg pt-1">출발: {route.start_place}</h4>
+            <h4 className="font-bold text-lg pt-1">출발: {route.start_place || route.start_point?.nickname || route.start_point?.stationName || ''}</h4>
           </div>
 
           {/* 구간 세그먼트 */}
@@ -226,7 +226,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
             <div className="absolute w-8 h-8 bg-green-500 rounded-full -left-[36px] top-3 shadow-lg shadow-green-500/20 flex items-center justify-center">
               <CheckCircle2 size={18} className="text-white" />
             </div>
-            <h4 className="font-bold text-xl">도착: {route.end_place}</h4>
+            <h4 className="font-bold text-xl">도착: {route.end_place || route.end_point?.nickname || route.end_point?.stationName || ''}</h4>
             <p className="text-xs text-gray-400 mt-1">총 {totalMins}분 여정 완료</p>
           </div>
         </div>

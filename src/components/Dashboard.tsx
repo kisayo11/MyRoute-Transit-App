@@ -99,8 +99,10 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onRequestAuth
                   {/* 경로 이름 + 삭제 */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 pr-3">
-                      <h3 className="font-black text-base leading-tight truncate">{r.route_name || '이름 없음'}</h3>
-                      <p className="text-xs text-gray-400 mt-0.5">{r.start_place} → {r.end_place}</p>
+                      <h3 className="font-black text-base leading-tight truncate">{r.route_name || r.name || '이름 없음'}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {r.start_place || r.start_point?.nickname || r.start_point?.stationName || ''} → {r.end_place || r.end_point?.nickname || r.end_point?.stationName || ''}
+                      </p>
                     </div>
                     <button
                       onClick={(e) => handleDelete(e, r.id)}
