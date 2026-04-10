@@ -92,8 +92,18 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
               
               const filtered = result.data.filter((a: SubwayArrival) => {
                 if (!path.wayCode) return true; // wayCode 없으면 전부 표시
-                if (wantUp && (a.updnLine === '상행' || a.updnLine === '내선')) return true;
-                if (wantDown && (a.updnLine === '하행' || a.updnLine === '외선')) return true;
+                const isLine2 = a.subwayId === '1002'; // 서울시 2호선 ID
+
+                if (wantUp) {
+                  // 2호선(내선/하행) vs 일반(상행)
+                  if (isLine2 && (a.updnLine === '내선' || a.updnLine === '하행')) return true;
+                  if (!isLine2 && (a.updnLine === '상행' || a.updnLine === '내선')) return true;
+                }
+                if (wantDown) {
+                  // 2호선(외선/상행) vs 일반(하행)
+                  if (isLine2 && (a.updnLine === '외선' || a.updnLine === '상행')) return true;
+                  if (!isLine2 && (a.updnLine === '하행' || a.updnLine === '외선')) return true;
+                }
                 return false;
               });
 
