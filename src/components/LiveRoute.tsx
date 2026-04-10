@@ -148,7 +148,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
 
     // 버스
     if (path.trafficType === 2) {
-      const stId = path.startLocalStationID || path.startArsID || path.startID
+      const stId = path.startArsID || path.startLocalStationID || path.startID
       const key = `bus_${stId}`
       const result = realtimeData[key]
       const busNo = path.lane?.[0]?.busNo || '버스'

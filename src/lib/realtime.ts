@@ -152,30 +152,31 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     return { ok: false, data: [], error: err.message }
   }
 }
-// ===================== 버스 API =====================
-// 국가공공데이터포털: ws.bus.go.kr
+// ===================== 버스 API (서울시 전용) =====================
+// 서울시 열린데이터 광장: openAPI.seoul.go.kr
 
-export async function getRealtimeBus(stId: string): Promise<RealtimeResult<BusArrival>> {
+export async function getRealtimeBus(arsId: string): Promise<RealtimeResult<BusArrival>> {
   const key = import.meta.env.VITE_PUBLIC_BUS_API_KEY
 
   if (!key) return { ok: false, data: [], error: '버스 인증키 없음' }
-  if (!stId) return { ok: false, data: [], error: '정류소 ID 없음' }
+  if (!arsId) return { ok: false, data: [], error: '정류소 ARS-ID 없음' }
 
   try {
-    // 이미 인코딩된 키가 올 경우를 대비해, ServiceKey 파라미터는 변수 그대로 사용하거나 강제 인코딩을 한 번만 수행합니다.
-    const baseUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${key}&stId=${stId}&resultType=json`
+    // 서울시 버스 API 엔드포인트
+    const baseUrl = `http://openAPI.seoul.go.kr:8088/${key}/json/getArrInfoByArsId/1/10/${arsId}`
     const data = await proxyFetch(baseUrl, 15000)
 
-    if (data.msgHeader?.headerCd !== '0') {
-      const errorMsg = data.msgHeader?.headerMsg || '알 수 없는 버스 API 오류'
+    // 서울시 API 구조체 체크
+    const root = data.getArrInfoByArsId
+    if (root?.RESULT && root.RESULT.CODE !== 'INFO-000') {
       return { 
         ok: false, 
         data: [], 
-        error: `${errorMsg} (Code: ${data.msgHeader?.headerCd})`
+        error: `${root.RESULT.MESSAGE || 'API 오류'} (${root.RESULT.CODE})`
       }
     }
 
-    const items = data.msgBody?.itemList || []
+    const items = root?.row || []
     const itemList = Array.isArray(items) ? items : items ? [items] : []
 
     const arrivals: BusArrival[] = itemList.map((item: any) => ({
@@ -189,7 +190,7 @@ export async function getRealtimeBus(stId: string): Promise<RealtimeResult<BusAr
     return { ok: true, data: arrivals, error: null }
 
   } catch (err: any) {
-    console.error('[버스 API 오류]', stId, err.message)
+    console.error('[버스 API 오류]', arsId, err.message)
     return { ok: false, data: [], error: err.message }
   }
 }
