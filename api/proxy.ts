@@ -15,7 +15,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const targetUrl = decodeURIComponent(url as string);
+    // Vercel의 req.query.url은 이미 한 번 디코딩된 상태이므로, 
+    // 여기서 추가로 decodeURIComponent를 하지 않아야 원본 인코딩 값이 보존됩니다.
+    const targetUrl = url as string;
     console.log('Target URL:', targetUrl);
 
     // 서울시 및 ODsay API의 도메인/보안 차단 회피를 위한 헤더 구성

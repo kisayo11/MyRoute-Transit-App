@@ -162,19 +162,20 @@ export async function getRealtimeBus(stId: string): Promise<RealtimeResult<BusAr
   if (!stId) return { ok: false, data: [], error: '정류소 ID 없음' }
 
   try {
-    const url = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?ServiceKey=${encodeURIComponent(key)}&stId=${stId}&resultType=json`
-    const data = await proxyFetch(url, 15000)
+    // 이미 인코딩된 키가 올 경우를 대비해, ServiceKey 파라미터는 변수 그대로 사용하거나 강제 인코딩을 한 번만 수행합니다.
+    const baseUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${key}&stId=${stId}&resultType=json`
+    const data = await proxyFetch(baseUrl, 15000)
 
-    const header = data.msgHeader
-    if (header?.headerCd !== '0') {
+    if (data.msgHeader?.headerCd !== '0') {
+      const errorMsg = data.msgHeader?.headerMsg || '알 수 없는 버스 API 오류'
       return { 
         ok: false, 
         data: [], 
-        error: `버스 API 오류: ${header?.headerMsg || '알 수 없는 오류'} (Code: ${header?.headerCd})`
+        error: `${errorMsg} (Code: ${data.msgHeader?.headerCd})`
       }
     }
 
-    const items = data.msgBody?.itemList
+    const items = data.msgBody?.itemList || []
     const itemList = Array.isArray(items) ? items : items ? [items] : []
 
     const arrivals: BusArrival[] = itemList.map((item: any) => ({
