@@ -152,45 +152,61 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     return { ok: false, data: [], error: err.message }
   }
 }
-// ===================== 버스 API (서울시 전용) =====================
-// 서울시 열린데이터 광장: openAPI.seoul.go.kr
+// ===================== 버스 API (하이브리드 엔진) =====================
+// 서울시 전용 망과 국가 공공데이터 망을 지능적으로 스위칭합니다.
 
-export async function getRealtimeBus(arsId: string): Promise<RealtimeResult<BusArrival>> {
-  const key = import.meta.env.VITE_PUBLIC_BUS_API_KEY
+export async function getRealtimeBus(arsId: string, stId: string): Promise<RealtimeResult<BusArrival>> {
+  const seoulKey = import.meta.env.VITE_PUBLIC_SEOUL_BUS_API_KEY
+  const dataKey = import.meta.env.VITE_PUBLIC_DATA_BUS_API_KEY
 
-  if (!key) return { ok: false, data: [], error: '버스 인증키 없음' }
-  if (!arsId) return { ok: false, data: [], error: '정류소 ARS-ID 없음' }
-
-  try {
-    // 서울시 버스 API 엔드포인트
-    const baseUrl = `http://openAPI.seoul.go.kr:8088/${key}/json/getArrInfoByArsId/1/10/${arsId}`
-    const data = await proxyFetch(baseUrl, 15000)
-
-    // 서울시 API 구조체 체크
-    const root = data.getArrInfoByArsId
-    if (root?.RESULT && root.RESULT.CODE !== 'INFO-000') {
-      return { 
-        ok: false, 
-        data: [], 
-        error: `${root.RESULT.MESSAGE || 'API 오류'} (${root.RESULT.CODE})`
+  // 1순위: 서울시 열린데이터 광장 (빠름, 서울 버스 전용)
+  if (arsId && arsId.length === 5 && seoulKey) {
+    try {
+      const seoulUrl = `http://openAPI.seoul.go.kr:8088/${seoulKey}/json/getArrInfoByArsId/1/10/${arsId}`
+      const data = await proxyFetch(seoulUrl, 10000)
+      
+      const root = data.getArrInfoByArsId
+      if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
+        const arrivals: BusArrival[] = root.row.map((item: any) => ({
+          rtNm: item.rtNm || '',
+          arrmsg1: item.arrmsg1 || '정보 없음',
+          arrmsg2: item.arrmsg2 || '',
+          stNm: item.stNm || '',
+          adirection: item.adirection || ''
+        }))
+        return { ok: true, data: arrivals, error: null }
       }
+    } catch (err) {
+      console.warn('[서울 버스 API 실패, 포털로 전환]', arsId, err)
     }
-
-    const items = root?.row || []
-    const itemList = Array.isArray(items) ? items : items ? [items] : []
-
-    const arrivals: BusArrival[] = itemList.map((item: any) => ({
-      rtNm: item.rtNm || '',
-      arrmsg1: item.arrmsg1 || '정보 없음',
-      arrmsg2: item.arrmsg2 || '',
-      stNm: item.stNm || '',
-      adirection: item.adirection || ''
-    }))
-
-    return { ok: true, data: arrivals, error: null }
-
-  } catch (err: any) {
-    console.error('[버스 API 오류]', arsId, err.message)
-    return { ok: false, data: [], error: err.message }
   }
+
+  // 2순위: 국가 공공데이터 포털 (전국구, 경기 버스 포함)
+  if (stId && dataKey) {
+    try {
+      const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${dataKey}&stId=${stId}&resultType=json`
+      const data = await proxyFetch(portalUrl, 15000)
+
+      if (data.msgHeader?.headerCd === '0') {
+        const items = data.msgBody?.itemList || []
+        const itemList = Array.isArray(items) ? items : items ? [items] : []
+        
+        const arrivals: BusArrival[] = itemList.map((item: any) => ({
+          rtNm: item.rtNm || '',
+          arrmsg1: item.arrmsg1 || '정보 없음',
+          arrmsg2: item.arrmsg2 || '',
+          stNm: item.stNm || '',
+          adirection: item.adirection || ''
+        }))
+        return { ok: true, data: arrivals, error: null }
+      } else {
+        return { ok: false, data: [], error: data.msgHeader?.headerMsg || '버스 정보 없음' }
+      }
+    } catch (err: any) {
+      console.error('[국가 버스 API 오류]', stId, err.message)
+      return { ok: false, data: [], error: err.message }
+    }
+  }
+
+  return { ok: false, data: [], error: '호환되는 정류소 ID가 없습니다.' }
 }

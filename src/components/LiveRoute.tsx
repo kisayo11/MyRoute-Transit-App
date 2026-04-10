@@ -21,11 +21,14 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
         const key = `subway_${path.startName}`
         results[key] = await getRealtimeSubway(path.startName)
       } else if (path.trafficType === 2) {
-        // 버스 — startLocalStationID (표준 9자리) 최우선 사용, 그 다음 ARS ID
-        const stId = path.startLocalStationID || path.startArsID || path.startID
-        if (stId) {
-          const key = `bus_${stId}`
-          results[key] = await getRealtimeBus(String(stId))
+        // 버스 — arsID(5자리)와 stId(9자리)를 모두 추출하여 하이브리드 엔진에 전달
+        const arsId = path.startArsID ? String(path.startArsID) : ''
+        const stId = (path.startLocalStationID || path.startID) ? String(path.startLocalStationID || path.startID) : ''
+        
+        if (arsId || stId) {
+          const mainId = arsId || stId
+          const key = `bus_${mainId}`
+          results[key] = await getRealtimeBus(arsId, stId)
         }
       }
     }
