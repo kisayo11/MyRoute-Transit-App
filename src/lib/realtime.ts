@@ -36,15 +36,26 @@ export interface BusArrival {
 // ===================== 공통 유틸 =====================
 
 async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
-  // targetUrl에 이미 한글이 포함되어 있을 수 있으므로, 
-  // 전체를 인코딩하되 기호들이 중복 인코딩되지 않게 처리하는 프록시 전용 유틸
-  const encodedTarget = encodeURIComponent(targetUrl)
+  // 브라우저 및 프록시 서버의 캐싱을 완전히 막기 위해 고유 타임스탬프 추가
+  const cacheBuster = `_t=${Date.now()}`
+  const targetWithCacheBuster = targetUrl.includes('?') 
+    ? `${targetUrl}&${cacheBuster}` 
+    : `${targetUrl}?${cacheBuster}`
+
+  const encodedTarget = encodeURIComponent(targetWithCacheBuster)
   const url = PROXY + encodedTarget
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   
   try {
-    const res = await fetch(url, { signal: controller.signal })
+    const res = await fetch(url, { 
+      signal: controller.signal,
+      cache: 'no-store', // 브라우저 캐시 무시
+      headers: {
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
+      }
+    })
     clearTimeout(timer)
     
     if (!res.ok) {
