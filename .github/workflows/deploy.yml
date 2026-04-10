@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (v1.1.0)
 
 on:
   push:
@@ -40,12 +40,15 @@ jobs:
           VITE_PUBLIC_SUBWAY_API_KEY: ${{ secrets.VITE_PUBLIC_SUBWAY_API_KEY }}
           VITE_PUBLIC_BUS_API_KEY: ${{ secrets.VITE_PUBLIC_BUS_API_KEY }}
 
-      - name: Setup SPA (404 fallback + .nojekyll)
+      - name: Preparation for Deployment
         run: |
+          # [Crucial] 404 Fallback for SPA
           cp dist/index.html dist/404.html
+          # [Crucial] Bypass Jekyll
           touch dist/.nojekyll
-          echo "Build complete. Files:"
-          ls dist/
+          # [Logging] Verify file structure to prevent MIME errors
+          echo "Listing dist contents for verification:"
+          ls -R dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

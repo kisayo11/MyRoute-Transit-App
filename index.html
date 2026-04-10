@@ -2,31 +2,40 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="나만의 대중교통 경로 저장 및 실시간 도착 정보" />
     <title>MyRoute</title>
+    
+    <!-- [Nuclear Cache Cleanup] 이 스크립트는 모든 서비스 워커와 캐시를 즉각 파괴합니다. -->
     <script>
-      // 기존 서비스 워커 전부 강제 해제 (PWA 제거 후 캐시 초기화)
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let reg of registrations) {
-            reg.unregister();
-          }
-        });
-        // 캐시 스토리지도 전부 삭제
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name);
+      (function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let reg of registrations) {
+              reg.unregister().then(function(ok) {
+                if (ok) console.log('[System] ServiceWorker Nuked.');
+              });
             }
           });
         }
-      }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) {
+              caches.delete(name).then(function(ok) {
+                if (ok) console.log('[System] Cache Cluster Destroyed:', name);
+              });
+            }
+          });
+        }
+        // 로컬 스토리지 등에 남은 PWA 관련 메타데이터가 있다면 수동 삭제 가능
+        // localStorage.removeItem('pwa-metadata');
+        console.log('[System] Aggressive Cleanup Sequence Initiated.');
+      })();
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
+    <!-- Vite 표준 엔트리 포인트 설정: 빌드 시 자동으로 index.js로 치환됩니다. -->
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
