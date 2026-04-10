@@ -63,7 +63,14 @@ async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
     clearTimeout(timer)
     
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: 프록시 서버 응답 오류`)
+      let errorMsg = `HTTP ${res.status}: 프록시 서버 응답 오류`
+      try {
+        const errorJson = await res.json()
+        if (errorJson.error) errorMsg += ` (${errorJson.error})`
+      } catch (e) {
+        // ignore JSON parse error for error body
+      }
+      throw new Error(errorMsg)
     }
     
     const text = await res.text()
