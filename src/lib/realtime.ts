@@ -75,8 +75,11 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
   const cleanName = stationName.trim().replace(/역$/, '')
 
   try {
-    // 400 에러를 방지하기 위해 URL 구조를 가장 표준적인 방식으로 조립
-    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${cleanName}`
+    // allorigins 프록시는 URL 파라미터를 한 번 디코딩한 뒤 요청을 보냅니다.
+    // 만약 한글이 평문으로 남아있으면 프록시 내부의 HTTP 클라이언트에서 400 에러가 발생합니다.
+    // 따라서 역 이름을 여기서 한 번 인코딩하고, proxyFetch에서 전체를 인코딩하여 '더블 인코딩' 효과를 줍니다.
+    const encodedName = encodeURIComponent(cleanName)
+    const baseUrl = `http://swopenapi.seoul.go.kr/api/subway/${key}/json/realtimeStationArrival/0/10/${encodedName}`
     const data = await proxyFetch(baseUrl)
 
     // 서울시 API 특정 오류 메시지 체크
