@@ -165,7 +165,7 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
       const seoulUrl = `http://openAPI.seoul.go.kr:8088/${seoulKey}/json/getArrInfoByArsId/1/10/${arsId}`
       const data = await proxyFetch(seoulUrl, 10000)
       
-      const root = data.getArrInfoByArsId
+      const root = data.getArrInfoByArsId || data.GetArrInfoByArsId
       if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
         const arrivals: BusArrival[] = root.row.map((item: any) => ({
           rtNm: item.rtNm || '',
@@ -176,8 +176,13 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
         }))
         return { ok: true, data: arrivals, error: null }
       }
+      
+      // 서울시 키 자체 에러가 있는 경우 (예: 인증실패)
+      if (root?.RESULT?.CODE && root.RESULT.CODE !== 'INFO-000') {
+        console.warn('[서울 버스 API 응답 오류]', root.RESULT.CODE, root.RESULT.MESSAGE)
+      }
     } catch (err) {
-      console.warn('[서울 버스 API 실패, 포털로 전환]', arsId, err)
+      console.warn('[서울 버스 API 네트워크 실패]', arsId, err)
     }
   }
 
@@ -187,7 +192,8 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
       const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${dataKey}&stId=${stId}&resultType=json`
       const data = await proxyFetch(portalUrl, 15000)
 
-      if (data.msgHeader?.headerCd === '0') {
+      const header = data.msgHeader
+      if (header?.headerCd === '0') {
         const items = data.msgBody?.itemList || []
         const itemList = Array.isArray(items) ? items : items ? [items] : []
         
@@ -200,13 +206,18 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
         }))
         return { ok: true, data: arrivals, error: null }
       } else {
-        return { ok: false, data: [], error: data.msgHeader?.headerMsg || '버스 정보 없음' }
+        const portalError = header?.headerMsg || '정보 없음'
+        return { 
+          ok: false, 
+          data: [], 
+          error: `포털 에러: ${portalError} (코드: ${header?.headerCd})`
+        }
       }
     } catch (err: any) {
-      console.error('[국가 버스 API 오류]', stId, err.message)
-      return { ok: false, data: [], error: err.message }
+      console.error('[국가 버스 API 네트워크 오류]', stId, err.message)
+      return { ok: false, data: [], error: `네트워크 오류: ${err.message}` }
     }
   }
 
-  return { ok: false, data: [], error: '호환되는 정류소 ID가 없습니다.' }
+  return { ok: false, data: [], error: '호환되는 정류소 ID가 없거나 인증키가 설정되지 않았습니다.' }
 }
