@@ -85,16 +85,29 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
               <div className="flex items-center gap-2 text-xs text-gray-400"><Loader2 size={12} className="animate-spin" /> 불러오는 중...</div>
             ) : !result.ok ? (
               <div className="flex items-center gap-2 text-xs text-red-400"><AlertCircle size={12} /> {result.error}</div>
-            ) : result.data.length === 0 ? (
-              <p className="text-xs text-gray-400">현재 도착 예정 열차 없음</p>
-            ) : (
-              result.data.slice(0, 2).map((a: SubwayArrival, i: number) => (
+            ) : (() => {
+              // wayCode: 1(상행/내선), 2(하행/외선)
+              const wantUp = path.wayCode === 1;
+              const wantDown = path.wayCode === 2;
+              
+              const filtered = result.data.filter((a: SubwayArrival) => {
+                if (!path.wayCode) return true; // wayCode 없으면 전부 표시
+                if (wantUp && (a.updnLine === '상행' || a.updnLine === '내선')) return true;
+                if (wantDown && (a.updnLine === '하행' || a.updnLine === '외선')) return true;
+                return false;
+              });
+
+              if (filtered.length === 0) {
+                return <p className="text-xs text-gray-400">현재 해당 방향 도착 예정 열차 없음</p>;
+              }
+
+              return filtered.slice(0, 2).map((a: SubwayArrival, i: number) => (
                 <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-2 pt-2 border-t border-purple-100 dark:border-purple-900/30' : ''}`}>
                   <span className="text-xs text-gray-500 truncate pr-2">{a.trainLineNm}</span>
                   <span className="text-sm font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">{a.arvlMsg2}</span>
                 </div>
-              ))
-            )}
+              ));
+            })()}
           </div>
         </div>
       )
