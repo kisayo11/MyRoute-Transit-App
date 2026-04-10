@@ -1,39 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { VitePWA } from 'vite-plugin-pwa'
 
+// PWA 제거 — 서비스 워커 캐시가 MIME 오류의 근본 원인
+// 개인용 앱에서 PWA는 필요 없고 오히려 구버전 캐시 문제를 유발함
 export default defineConfig({
   base: '/MyRoute-Transit-App/',
   plugins: [
     react(),
     tailwindcss(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      manifest: {
-        name: 'MyRoute',
-        short_name: 'MyRoute',
-        description: '대중교통 커스텀 라우팅 및 ETA 앱',
-        theme_color: '#16171d',
-        background_color: '#ffffff',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'favicon.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml'
-          },
-          {
-            src: 'favicon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml'
-          }
-        ]
-      },
-      workbox: {
-        skipWaiting: true,
-        clientsClaim: true
-      }
-    })
   ],
 })
