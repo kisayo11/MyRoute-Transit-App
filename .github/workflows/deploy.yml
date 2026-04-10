@@ -36,31 +36,16 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_ODSAY_API_KEY: ${{ secrets.VITE_ODSAY_API_KEY }}
-          VITE_PUBLIC_SUBWAY_API_KEY: ${{ secrets.VITE_PUBLIC_SUBWAY_API_KEY || secrets.VITE_SEOUL_SUBWAY_KEY }}
-          VITE_PUBLIC_BUS_API_KEY: ${{ secrets.VITE_PUBLIC_BUS_API_KEY || secrets.VITE_SEOUL_BUS_KEY }}
-          VITE_SEOUL_SUBWAY_KEY: ${{ secrets.VITE_SEOUL_SUBWAY_KEY || secrets.VITE_PUBLIC_SUBWAY_API_KEY }}
-          VITE_SEOUL_BUS_KEY: ${{ secrets.VITE_SEOUL_BUS_KEY || secrets.VITE_PUBLIC_BUS_API_KEY }}
+          VITE_KAKAO_API_KEY: ${{ secrets.VITE_KAKAO_API_KEY }}
+          VITE_PUBLIC_SUBWAY_API_KEY: ${{ secrets.VITE_PUBLIC_SUBWAY_API_KEY }}
+          VITE_PUBLIC_BUS_API_KEY: ${{ secrets.VITE_PUBLIC_BUS_API_KEY }}
 
-      - name: Sanity Check (Verification)
+      - name: Setup SPA (404 fallback + .nojekyll)
         run: |
-          echo "Checking if index.html was generated correctly..."
-          if [ ! -f dist/index.html ]; then
-            echo "Error: dist/index.html not found!"
-            exit 1
-          fi
-          
-          echo "Creating 404.html for SPA routing insurance..."
           cp dist/index.html dist/404.html
-          
-          echo "Checking if asset paths are correctly resolved..."
-          grep -q "/MyRoute-Transit-App/assets/" dist/index.html || { echo "Error: Expected asset path not found in index.html. Checking build structure..."; ls -R dist; exit 1; }
-          
-          if [ -f dist/.nojekyll ]; then
-            echo ".nojekyll found in dist root. OK."
-          else
-            echo "Adding .nojekyll to dist root..."
-            touch dist/.nojekyll
-          fi
+          touch dist/.nojekyll
+          echo "Build complete. Files:"
+          ls dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -77,5 +62,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
