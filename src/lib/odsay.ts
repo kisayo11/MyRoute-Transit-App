@@ -4,7 +4,11 @@ const BASE_URL = 'https://api.odsay.com/v1/api'
 // 정류장/역명 검색 API (장소 검색 대신 확실한 대중교통 노드 검색)
 export async function searchStation(stationName: string) {
   try {
-    const url = `${BASE_URL}/searchStation?lang=0&stationName=${encodeURIComponent(stationName)}&apiKey=${encodeURIComponent(ODSAY_API_KEY)}`
+    const targetUrl = `${BASE_URL}/searchStation?lang=0&stationName=${encodeURIComponent(stationName)}&apiKey=${encodeURIComponent(ODSAY_API_KEY)}`
+    
+    // Vercel 자체 API 터널 사용
+    const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`
+    
     const response = await fetch(url)
     const data = await response.json()
     if (data.error) throw new Error(data.error.msg)
@@ -19,7 +23,11 @@ export async function searchStation(stationName: string) {
 // X: 경도(Longitude), Y: 위도(Latitude)
 export async function searchPubTransPath(sx: string, sy: string, ex: string, ey: string, pathType: 0 | 1 | 2 = 0) {
   try {
-    const url = `${BASE_URL}/searchPubTransPathT?lang=0&SX=${sx}&SY=${sy}&EX=${ex}&EY=${ey}&SearchPathType=${pathType}&apiKey=${encodeURIComponent(ODSAY_API_KEY)}`
+    const targetUrl = `${BASE_URL}/searchPubTransPathT?lang=0&SX=${sx}&SY=${sy}&EX=${ex}&EY=${ey}&SearchPathType=${pathType}&apiKey=${encodeURIComponent(ODSAY_API_KEY)}`
+    
+    // Vercel 자체 API 터널 사용
+    const url = `/api/proxy?url=${encodeURIComponent(targetUrl)}`
+
     const response = await fetch(url)
     const data = await response.json()
     if (data.error) throw new Error(data.error.msg)
