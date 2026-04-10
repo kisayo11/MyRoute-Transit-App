@@ -192,11 +192,18 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
                   {startResults.length > 0 && (
                     <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
                       {startResults.map((st, idx) => (
-                        <div key={idx} onClick={() => selectStation(st, 'start')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center">
-                          {st.stationClass === 1 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
-                           st.stationClass === 2 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
-                           <MapPin size={16} className="text-primary mr-2" />} 
-                          {st.stationName}
+                        <div key={idx} onClick={() => selectStation(st, 'start')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer flex flex-col">
+                          <div className="flex items-center text-sm font-bold">
+                            {st.stationClass === 1 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
+                             st.stationClass === 2 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
+                             <MapPin size={16} className="text-primary mr-2" />} 
+                            {st.stationName}
+                          </div>
+                          {(st.laneName || st.arsID) && (
+                            <div className="text-[10.5px] font-medium text-gray-500 dark:text-gray-400 mt-1 pl-6">
+                              {st.laneName}{st.laneName && st.arsID ? ' | ' : ''}{st.arsID ? `ID: ${st.arsID}` : ''}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -211,11 +218,18 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
                   {endResults.length > 0 && (
                     <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
                       {endResults.map((st, idx) => (
-                        <div key={idx} onClick={() => selectStation(st, 'end')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer text-sm font-bold flex items-center">
-                          {st.stationClass === 1 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
-                           st.stationClass === 2 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
-                           <MapPin size={16} className="text-primary mr-2" />} 
-                          {st.stationName}
+                        <div key={idx} onClick={() => selectStation(st, 'end')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer flex flex-col">
+                          <div className="flex items-center text-sm font-bold">
+                            {st.stationClass === 1 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
+                             st.stationClass === 2 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
+                             <MapPin size={16} className="text-primary mr-2" />} 
+                            {st.stationName}
+                          </div>
+                          {(st.laneName || st.arsID) && (
+                            <div className="text-[10.5px] font-medium text-gray-500 dark:text-gray-400 mt-1 pl-6">
+                              {st.laneName}{st.laneName && st.arsID ? ' | ' : ''}{st.arsID ? `ID: ${st.arsID}` : ''}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
