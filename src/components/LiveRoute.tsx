@@ -90,18 +90,29 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
               const wantUp = path.wayCode === 1;
               const wantDown = path.wayCode === 2;
               
+              // ODSay 호선 코드 -> 서울시 subwayId 매핑
+              const codeToId: Record<number, string> = {
+                1: '1001', 2: '1002', 3: '1003', 4: '1004', 5: '1005',
+                6: '1006', 7: '1007', 8: '1008', 9: '1009',
+                104: '1063', 108: '1065', 109: '1077', 116: '1075', 113: '1092'
+              };
+              const mySubwayId = path.lane?.[0]?.subwayCode ? codeToId[path.lane[0].subwayCode] : '';
+              
               const filtered = result.data.filter((a: SubwayArrival) => {
-                if (!path.wayCode) return true; // wayCode 없으면 전부 표시
+                // 환승역에서 다른 호선 열차 필터링
+                if (mySubwayId && a.subwayId && a.subwayId !== mySubwayId) return false;
+                
+                if (!path.wayCode) return true; // wayCode 없으면 호선만 맞으면 전부 표시
                 const isLine2 = a.subwayId === '1002'; // 서울시 2호선 ID
 
                 if (wantUp) {
-                  // 2호선(내선/하행) vs 일반(상행)
-                  if (isLine2 && (a.updnLine === '내선' || a.updnLine === '하행')) return true;
+                  // ODSay 1(상행) -> 2호선은 숫자 감소 방향(213->212) = 외선/상행
+                  if (isLine2 && (a.updnLine === '외선' || a.updnLine === '상행')) return true;
                   if (!isLine2 && (a.updnLine === '상행' || a.updnLine === '내선')) return true;
                 }
                 if (wantDown) {
-                  // 2호선(외선/상행) vs 일반(하행)
-                  if (isLine2 && (a.updnLine === '외선' || a.updnLine === '상행')) return true;
+                  // ODSay 2(하행) -> 2호선은 숫자 증가 방향(213->216) = 내선/하행
+                  if (isLine2 && (a.updnLine === '내선' || a.updnLine === '하행')) return true;
                   if (!isLine2 && (a.updnLine === '하행' || a.updnLine === '외선')) return true;
                 }
                 return false;
