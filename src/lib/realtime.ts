@@ -18,10 +18,11 @@ export interface RealtimeResult<T> {
 }
 
 export interface SubwayArrival {
+  subwayId: string     // "1002" 등 노선 식별자
   trainLineNm: string  // "2호선 - 성수행"
   arvlMsg2: string     // "2분 후"
   arvlMsg3: string     // "현재 구의역"
-  updnLine: string     // "상행" | "하행"
+  updnLine: string     // "상행" | "하행" | "내선" | "외선"
 }
 
 export interface BusArrival {
@@ -88,6 +89,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
     }
 
     const arrivals: SubwayArrival[] = (data.realtimeArrivalList || []).map((item: any) => ({
+      subwayId: item.subwayId?.toString() || '',
       trainLineNm: item.trainLineNm || '',
       arvlMsg2: item.arvlMsg2 || '',
       arvlMsg3: item.arvlMsg3 || '',
