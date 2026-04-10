@@ -120,12 +120,8 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
 
     const { error } = await supabase.from('routes').insert({
       user_id: session.user.id,
-      route_name: routeName || `${startStation.stationName} ➔ ${endStation.stationName}`,
-      start_place: startPlaceName || startStation.stationName,
-      end_place: endPlaceName || endStation.stationName,
       path_info: extendedPathInfo,
-      // 하위 호환성용 기존 필드
-      name: routeName,
+      name: routeName || `${startStation.stationName} ➔ ${endStation.stationName}`,
       start_point: startPoint,
       end_point: endPoint
     })
