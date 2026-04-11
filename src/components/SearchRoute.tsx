@@ -2,8 +2,13 @@ import { useState } from 'react'
 import { searchPubTransPath, searchStation } from '../lib/odsay'
 import { supabase } from '../lib/supabase'
 import { ArrowLeft, Search, MapPin, TrainFront, PersonStanding, Bus } from 'lucide-react'
+// Route type will be used later if needed
 
-export default function SearchRoute({ session, onBack, onRequestAuth }: { session: any, onBack: () => void, onRequestAuth: () => void }) {
+export default function SearchRoute({ session, onBack, onRequestAuth }: { 
+  session: { user: { id: string, email?: string } } | null, 
+  onBack: () => void, 
+  onRequestAuth: () => void 
+}) {
   const [step, setStep] = useState<1 | 2>(1)
   
   // 텍스트 기반 사용자 정의 출발/도착 명칭
@@ -18,13 +23,13 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
   // 대중교통 탑승/하차 역
   const [startQuery, setStartQuery] = useState('')
   const [endQuery, setEndQuery] = useState('')
-  const [startResults, setStartResults] = useState<any[]>([])
-  const [endResults, setEndResults] = useState<any[]>([])
-  const [startStation, setStartStation] = useState<any>(null)
-  const [endStation, setEndStation] = useState<any>(null)
+  const [startResults, setStartResults] = useState<Record<string, unknown>[]>([])
+  const [endResults, setEndResults] = useState<Record<string, unknown>[]>([])
+  const [startStation, setStartStation] = useState<Record<string, any> | null>(null)
+  const [endStation, setEndStation] = useState<Record<string, any> | null>(null)
   
-  const [paths, setPaths] = useState<any[]>([])
-  const [selectedPath, setSelectedPath] = useState<any>(null)
+  const [paths, setPaths] = useState<Record<string, any>[]>([])
+  const [selectedPath, setSelectedPath] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleSearchStation = async (query: string, type: 'start'|'end') => {
@@ -93,13 +98,13 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: { sessio
     const customTotalMins = selectedPath.info.totalTime + walkToStationMins + walkFromStationMins
     
     // 매핑 로직: 첫 번째 도보와 마지막 도보에 사용자 입력을 강제로 반영
-    const updatedSubPaths = selectedPath.subPath.map((sp: any, idx: number) => {
+    const updatedSubPaths = (selectedPath.subPath as Record<string, unknown>[]).map((sp, idx: number) => {
       // 첫 번째 도보 구간 (Origin -> Station)
       if (idx === 0 && sp.trafficType === 3 && walkToStationMins > 0) {
         return { ...sp, sectionTime: walkToStationMins }
       }
       // 마지막 도보 구간 (Station -> Destination)
-      if (idx === selectedPath.subPath.length - 1 && sp.trafficType === 3 && walkFromStationMins > 0) {
+      if (idx === (selectedPath.subPath as any[]).length - 1 && sp.trafficType === 3 && walkFromStationMins > 0) {
         return { ...sp, sectionTime: walkFromStationMins }
       }
       return sp

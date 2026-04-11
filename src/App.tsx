@@ -7,12 +7,12 @@ import LiveRoute from './components/LiveRoute'
 import EditRoute from './components/EditRoute'
 
 function App() {
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<unknown>(null)
   const [loading, setLoading] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [view, setView] = useState<'home' | 'search' | 'live' | 'edit'>('home')
-  const [currentLiveRoute, setCurrentLiveRoute] = useState<any>(null)
-  const [editingRoute, setEditingRoute] = useState<any>(null)
+  const [currentLiveRoute, setCurrentLiveRoute] = useState<unknown>(null)
+  const [editingRoute, setEditingRoute] = useState<unknown>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {

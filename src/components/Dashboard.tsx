@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { LogOut, Plus, Trash2, Edit3, ChevronRight, TrainFront, Bus, Loader2 } from 'lucide-react'
+import { type Route } from '../types'
 
 export default function Dashboard({ session, onGoSearch, onGoLive, onEdit, onRequestAuth }: {
-  session: any
+  session: { user: { id: string, email?: string } } | null
   onGoSearch: () => void
-  onGoLive: (route: any) => void
-  onEdit: (route: any) => void
+  onGoLive: (route: Route) => void
+  onEdit: (route: Route) => void
   onRequestAuth: () => void
 }) {
-  const [routes, setRoutes] = useState<any[]>([])
+  const [routes, setRoutes] = useState<Route[]>([])
   const [loading, setLoading] = useState(false)
 
   const fetchRoutes = async () => {
@@ -36,7 +37,10 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onEdit, onReq
     onEdit(route)
   }
 
-  useEffect(() => { fetchRoutes() }, [session])
+  useEffect(() => { 
+    if (session) fetchRoutes() 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session])
 
   return (
     <div className="max-w-md mx-auto min-h-[100dvh] pt-12 p-5 pb-20 flex flex-col">
@@ -93,7 +97,7 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onEdit, onReq
           <div className="space-y-3">
             {routes.map(r => {
               const subPaths = r.path_info?.subPath || []
-              const transitPaths = subPaths.filter((sp: any) => sp.trafficType !== 3)
+              const transitPaths = subPaths.filter((sp: Record<string, unknown>) => sp.trafficType !== 3)
               const totalMins = r.path_info?.info?.totalTime ?? 0
 
               return (
@@ -128,7 +132,7 @@ export default function Dashboard({ session, onGoSearch, onGoLive, onEdit, onReq
 
                   {/* 노선 뱃지 */}
                   <div className="flex flex-wrap gap-1.5 mb-4">
-                    {transitPaths.map((sp: any, idx: number) => (
+                    {transitPaths.map((sp: Record<string, unknown>, idx: number) => (
                       <span key={idx} className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-md ${
                         sp.trafficType === 1
                           ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400'

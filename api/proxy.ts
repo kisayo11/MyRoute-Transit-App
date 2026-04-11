@@ -54,8 +54,9 @@ export default async function handler(req, res) {
     res.setHeader('Expires', '0');
 
     res.status(200).send(data);
-  } catch (error: any) {
-    console.error('Vercel Proxy Fatal Error:', error.message);
-    res.status(500).json({ error: 'Proxy Exception', message: error.message });
+  } catch (error) {
+    const err = error as Error;
+    console.error('Vercel Proxy Fatal Error:', err.message);
+    res.status(500).json({ error: 'Proxy Exception', message: err.message });
   }
 }

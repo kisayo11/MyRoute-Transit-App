@@ -1,21 +1,22 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ArrowLeft, Navigation, MapPin, Loader2, TrainFront, CheckCircle2, ChevronRight, Bus, RefreshCw, AlertCircle, Clock } from 'lucide-react'
-import { getRealtimeSubway, getRealtimeBus, type SubwayArrival, type BusArrival } from '../lib/realtime'
+import { getRealtimeSubway, getRealtimeBus } from '../lib/realtime'
+import { type SubwayArrival, type BusArrival } from '../types'
 
-export default function LiveRoute({ route, onBack }: { route: any, onBack: () => void }) {
+export default function LiveRoute({ route, onBack }: { route: Route, onBack: () => void }) {
   const [isActive, setIsActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [realtimeData, setRealtimeData] = useState<Record<string, any>>({})
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const subPaths = route.path_info?.subPath || []
-  const totalMins = route.path_info?.info?.totalTime ?? 0
+  const subPaths = useMemo(() => (route.path_info as any)?.subPath || [], [route.path_info])
+  const totalMins = useMemo(() => (route.path_info as any)?.info?.totalTime ?? 0, [route.path_info])
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
     const results: Record<string, any> = {}
 
-    for (const path of subPaths) {
+    for (const path of (subPaths as any[])) {
       if (path.trafficType === 1) {
         // 지하철
         const key = `subway_${path.startName}`
@@ -267,7 +268,7 @@ export default function LiveRoute({ route, onBack }: { route: any, onBack: () =>
 
           {/* 구간 세그먼트 */}
           <div className="relative">
-            {subPaths.map((path: any, i: number) => renderSegment(path, i))}
+            {(subPaths as any[]).map((path: any, i: number) => renderSegment(path, i))}
           </div>
 
           {/* 도착점 */}

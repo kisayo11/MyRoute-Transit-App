@@ -8,33 +8,11 @@
  */
 
 // Vercel 자체 API 터널 사용 (/api/proxy)
-// ===================== 타입 정의 =====================
-
-export interface RealtimeResult<T> {
-  ok: boolean
-  data: T[]
-  error: string | null
-}
-
-export interface SubwayArrival {
-  subwayId: string     // "1002" 등 노선 식별자
-  trainLineNm: string  // "2호선 - 성수행"
-  arvlMsg2: string     // "2분 후"
-  arvlMsg3: string     // "현재 구의역"
-  updnLine: string     // "상행" | "하행" | "내선" | "외선"
-}
-
-export interface BusArrival {
-  rtNm: string         // 노선번호 "4425"
-  arrmsg1: string      // "3분 후 [1번째 전]"
-  arrmsg2: string      // "15분 후 [5번째 전]"
-  stNm: string         // 정류소명
-  adirection: string   // 진행방향
-}
+import { type RealtimeResult, type SubwayArrival, type BusArrival } from '../types'
 
 // ===================== 공통 유틸 =====================
 
-async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
+async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<unknown> {
   // 브라우저 및 프록시 서버의 캐싱을 완전히 막기 위해 고유 타임스탬프 추가
   const cacheBuster = `_t=${Date.now()}`
   const targetWithCacheBuster = targetUrl.includes('?') 
@@ -65,7 +43,7 @@ async function proxyFetch(targetUrl: string, timeoutMs = 12000): Promise<any> {
       try {
         const errorJson = await res.json()
         if (errorJson.error) errorMsg += ` (${errorJson.error})`
-      } catch (e) {
+      } catch {
         // ignore
       }
       throw new Error(errorMsg)
@@ -137,7 +115,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
       }
     }
 
-    const arrivals: SubwayArrival[] = (data.realtimeArrivalList || []).map((item: any) => ({
+    const arrivals: SubwayArrival[] = (data.realtimeArrivalList || []).map((item: Record<string, unknown>) => ({
       subwayId: item.subwayId?.toString() || '',
       trainLineNm: item.trainLineNm || '',
       arvlMsg2: item.arvlMsg2 || '',
@@ -147,9 +125,9 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
 
     return { ok: true, data: arrivals, error: null }
 
-  } catch (err: any) {
-    console.error('[지하철 API 오류]', cleanName, err.message)
-    return { ok: false, data: [], error: err.message }
+  } catch (err: unknown) {
+    const error = err as Error
+    return { ok: false, data: [], error: error.message }
   }
 }
 // ===================== 버스 API (하이브리드 엔진) =====================
@@ -167,7 +145,7 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
       
       const root = data.getArrInfoByArsId || data.GetArrInfoByArsId
       if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
-        const arrivals: BusArrival[] = root.row.map((item: any) => ({
+        const arrivals: BusArrival[] = root.row.map((item: Record<string, unknown>) => ({
           rtNm: item.rtNm || '',
           arrmsg1: item.arrmsg1 || '정보 없음',
           arrmsg2: item.arrmsg2 || '',
@@ -179,10 +157,10 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
       
       // 서울시 키 자체 에러가 있는 경우 (예: 인증실패)
       if (root?.RESULT?.CODE && root.RESULT.CODE !== 'INFO-000') {
-        console.warn('[서울 버스 API 응답 오류]', root.RESULT.CODE, root.RESULT.MESSAGE)
+        // Silently fail or handle error
       }
-    } catch (err) {
-      console.warn('[서울 버스 API 네트워크 실패]', arsId, err)
+    } catch {
+      // Silently fail to fallback
     }
   }
 
@@ -197,7 +175,7 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
         const items = data.msgBody?.itemList || []
         const itemList = Array.isArray(items) ? items : items ? [items] : []
         
-        const arrivals: BusArrival[] = itemList.map((item: any) => ({
+        const arrivals: BusArrival[] = itemList.map((item: Record<string, unknown>) => ({
           rtNm: item.rtNm || '',
           arrmsg1: item.arrmsg1 || '정보 없음',
           arrmsg2: item.arrmsg2 || '',
@@ -213,8 +191,8 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
           error: `포털 에러: ${portalError} (코드: ${header?.headerCd})`
         }
       }
-    } catch (err: any) {
-      console.error('[국가 버스 API 네트워크 오류]', stId, err.message)
+    } catch (error: unknown) {
+      const err = error as Error
       return { ok: false, data: [], error: `네트워크 오류: ${err.message}` }
     }
   }

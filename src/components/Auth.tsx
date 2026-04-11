@@ -27,7 +27,8 @@ export default function Auth({ onSuccess }: { onSuccess?: () => void }) {
           if (onSuccess) onSuccess()
         }
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as any // casting to any here for ease of access properties like error_description
       alert(error.error_description || error.message)
     } finally {
       setLoading(false)

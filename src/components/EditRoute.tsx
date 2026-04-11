@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { ArrowLeft, Save, Loader2, MapPin, Clock } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Clock } from 'lucide-react'
+import { type Route } from '../types'
 
 export default function EditRoute({ route, onBack, onSuccess }: { 
-  route: any, 
+  route: Route, 
   onBack: () => void, 
   onSuccess: () => void 
 }) {
