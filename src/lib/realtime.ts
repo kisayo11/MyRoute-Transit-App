@@ -134,68 +134,79 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
 // 서울시 전용 망과 국가 공공데이터 망을 지능적으로 스위칭합니다.
 
 export async function getRealtimeBus(arsId: string, stId: string): Promise<RealtimeResult<BusArrival>> {
-  const seoulKey = import.meta.env.VITE_PUBLIC_SEOUL_BUS_API_KEY
-  const dataKey = import.meta.env.VITE_PUBLIC_DATA_BUS_API_KEY
+  // 사용 가능한 모든 키를 수집합니다.
+  const env = import.meta.env
+  const seoulKeys = [
+    env.VITE_PUBLIC_SEOUL_BUS_API_KEY,
+    env.VITE_PUBLIC_BUS_API_KEY,
+    env.VITE_PUBLIC_SUBWAY_API_KEY // 서울시는 가끔 범용 키를 사용함
+  ].filter(Boolean) as string[]
+
+  const portalKeys = [
+    env.VITE_PUBLIC_DATA_BUS_API_KEY,
+    env.VITE_PUBLIC_BUS_API_KEY
+  ].filter(Boolean) as string[]
+
+  let lastError = '인증키가 설정되지 않았습니다.'
 
   // 1순위: 서울시 열린데이터 광장 (빠름, 서울 버스 전용)
-  if (arsId && arsId.length === 5 && seoulKey) {
-    try {
-      const seoulUrl = `http://openAPI.seoul.go.kr:8088/${seoulKey}/json/getArrInfoByArsId/1/10/${arsId}`
-      const data = await proxyFetch(seoulUrl, 10000)
-      
-      const root = data.getArrInfoByArsId || data.GetArrInfoByArsId
-      if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
-        const arrivals: BusArrival[] = root.row.map((item: Record<string, unknown>) => ({
-          rtNm: item.rtNm || '',
-          arrmsg1: item.arrmsg1 || '정보 없음',
-          arrmsg2: item.arrmsg2 || '',
-          stNm: item.stNm || '',
-          adirection: item.adirection || ''
-        }))
-        return { ok: true, data: arrivals, error: null }
-      }
-      
-      // 서울시 키 자체 에러가 있는 경우 (예: 인증실패)
-      if (root?.RESULT?.CODE && root.RESULT.CODE !== 'INFO-000') {
-        // Silently fail or handle error
-      }
-    } catch {
-      // Silently fail to fallback
-    }
-  }
-
-  // 2순위: 국가 공공데이터 포털 (전국구, 경기 버스 포함)
-  if (stId && dataKey) {
-    try {
-      const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${dataKey}&stId=${stId}&resultType=json`
-      const data = await proxyFetch(portalUrl, 15000)
-
-      const header = data.msgHeader
-      if (header?.headerCd === '0') {
-        const items = data.msgBody?.itemList || []
-        const itemList = Array.isArray(items) ? items : items ? [items] : []
+  if (arsId && arsId.length === 5 && seoulKeys.length > 0) {
+    for (const key of seoulKeys) {
+      try {
+        const seoulUrl = `http://openAPI.seoul.go.kr:8088/${key}/json/getArrInfoByArsId/1/10/${arsId}`
+        const data = await proxyFetch(seoulUrl, 10000)
         
-        const arrivals: BusArrival[] = itemList.map((item: Record<string, unknown>) => ({
-          rtNm: item.rtNm || '',
-          arrmsg1: item.arrmsg1 || '정보 없음',
-          arrmsg2: item.arrmsg2 || '',
-          stNm: item.stNm || '',
-          adirection: item.adirection || ''
-        }))
-        return { ok: true, data: arrivals, error: null }
-      } else {
-        const portalError = header?.headerMsg || '정보 없음'
-        return { 
-          ok: false, 
-          data: [], 
-          error: `포털 에러: ${portalError} (코드: ${header?.headerCd})`
+        const root = data.getArrInfoByArsId || data.GetArrInfoByArsId
+        if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
+          const arrivals: BusArrival[] = root.row.map((item: Record<string, unknown>) => ({
+            rtNm: item.rtNm || '',
+            arrmsg1: item.arrmsg1 || '정보 없음',
+            arrmsg2: item.arrmsg2 || '',
+            stNm: item.stNm || '',
+            adirection: item.adirection || ''
+          }))
+          return { ok: true, data: arrivals, error: null }
         }
+        
+        if (root?.RESULT?.CODE && root.RESULT.CODE !== 'INFO-000') {
+          lastError = `서울시 API 오류: ${root.RESULT.MESSAGE} (${root.RESULT.CODE})`
+        }
+      } catch (err: any) {
+        lastError = `서울시 연결 오류: ${err.message}`
       }
-    } catch (error: unknown) {
-      const err = error as Error
-      return { ok: false, data: [], error: `네트워크 오류: ${err.message}` }
     }
   }
 
-  return { ok: false, data: [], error: '호환되는 정류소 ID가 없거나 인증키가 설정되지 않았습니다.' }
+  // 2순위: 국가 공공데이터 포털 (전국구)
+  if (stId && portalKeys.length > 0) {
+    for (const key of portalKeys) {
+      try {
+        const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStIdList?serviceKey=${key}&stId=${stId}&resultType=json`
+        const data = await proxyFetch(portalUrl, 15000)
+
+        const header = data.msgHeader || data.comMsgHeader
+        if (header?.headerCd === '0' || header?.returnCode === '00') {
+          const items = data.msgBody?.itemList || []
+          const itemList = Array.isArray(items) ? items : items ? [items] : []
+          
+          if (itemList.length > 0) {
+            const arrivals: BusArrival[] = itemList.map((item: Record<string, unknown>) => ({
+              rtNm: item.rtNm || '',
+              arrmsg1: item.arrmsg1 || '정보 없음',
+              arrmsg2: item.arrmsg2 || '',
+              stNm: item.stNm || '',
+              adirection: item.adirection || ''
+            }))
+            return { ok: true, data: arrivals, error: null }
+          }
+        } else {
+          lastError = `공공포털 오류: ${header?.headerMsg || header?.errMsg || '인증 실패'} (${header?.headerCd || header?.returnCode})`
+        }
+      } catch (err: any) {
+        lastError = `공공포털 연결 오류: ${err.message}`
+      }
+    }
+  }
+
+  return { ok: false, data: [], error: lastError }
 }
