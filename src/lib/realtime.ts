@@ -181,7 +181,8 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
   if (stId && portalKeys.length > 0) {
     for (const key of portalKeys) {
       try {
-        const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStIdList?serviceKey=${key}&stId=${stId}&resultType=json`
+        // 'List' 접미사를 제거하여 404 오류 해결
+        const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${key}&stId=${stId}&resultType=json`
         const data = await proxyFetch(portalUrl, 15000)
 
         const header = data.msgHeader || data.comMsgHeader
@@ -203,6 +204,7 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
           lastError = `공공포털 오류: ${header?.headerMsg || header?.errMsg || '인증 실패'} (${header?.headerCd || header?.returnCode})`
         }
       } catch (err: any) {
+        // 404 등 네트워크 오류 발생 시 무시하고 다음 키/시스템으로 넘어감
         lastError = `공공포털 연결 오류: ${err.message}`
       }
     }
