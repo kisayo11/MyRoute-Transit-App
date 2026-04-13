@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ArrowLeft, Navigation, MapPin, Loader2, TrainFront, CheckCircle2, ChevronRight, Bus, RefreshCw, AlertCircle, Clock } from 'lucide-react'
+import { ArrowLeft, Navigation, MapPin, Loader2, TrainFront, CheckCircle2, ChevronRight, Bus, RefreshCw, AlertCircle } from 'lucide-react'
 import { getRealtimeSubway, getRealtimeBus } from '../lib/realtime'
 import { type SubwayArrival, type BusArrival } from '../types'
 

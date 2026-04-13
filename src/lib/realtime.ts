@@ -209,7 +209,7 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
           }))
           return { ok: true, data: arrivals, error: null }
         }
-      } catch (err: any) {
+      } catch {
         // 무시하고 다음 엔진 시도
       }
     }
