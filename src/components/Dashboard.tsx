@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { LogOut, Plus, Trash2, Edit3, ChevronRight, TrainFront, Bus, Loader2 } from 'lucide-react'
+import { LogOut, Plus, Trash2, Edit3, ChevronRight, TrainFront, Bus, Loader2, Zap } from 'lucide-react'
 import { type Route } from '../types'
 
 export default function Dashboard({ session, onGoSearch, onGoLive, onEdit, onRequestAuth }: {
