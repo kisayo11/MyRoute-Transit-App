@@ -199,7 +199,7 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
             </div>
 
             {/* STEP 2: 대중교통 노드 */}
-            <div className="glass-card rounded-[2.5rem] p-8 border-accent/10 relative overflow-hidden">
+            <div className="glass-card rounded-[2.5rem] p-8 border-accent/10 relative">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2.5 bg-accent/20 text-accent rounded-2xl">
                   <TrainFront size={20} strokeWidth={3} />
@@ -224,7 +224,7 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
                     <button onClick={() => handleSearchStation(startQuery, 'start')} className="p-4 bg-accent/20 text-accent rounded-2xl hover:bg-accent/30 active:scale-90 transition-all cursor-pointer"><Search size={20} strokeWidth={3} /></button>
                   </div>
                   {startResults.length > 0 && (
-                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass-card rounded-2xl shadow-2xl z-30 max-h-60 overflow-y-auto p-2 border-accent/20">
+                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass-card rounded-2xl shadow-2xl z-[100] max-h-60 overflow-y-auto p-2 border-accent/20">
                       {startResults.map((st, idx) => (
                         <div key={idx} onClick={() => selectStation(st, 'start')} className="p-4 rounded-xl hover:bg-accent/10 cursor-pointer flex items-center justify-between border-b border-white/5 last:border-none transition-colors group">
                           <div className="flex items-center gap-3">
@@ -259,7 +259,7 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
                     <button onClick={() => handleSearchStation(endQuery, 'end')} className="p-4 bg-accent/20 text-accent rounded-2xl hover:bg-accent/30 active:scale-90 transition-all cursor-pointer"><Search size={20} strokeWidth={3} /></button>
                   </div>
                   {endResults.length > 0 && (
-                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass-card rounded-2xl shadow-2xl z-30 max-h-60 overflow-y-auto p-2 border-accent/20">
+                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass-card rounded-2xl shadow-2xl z-[100] max-h-60 overflow-y-auto p-2 border-accent/20">
                       {endResults.map((st, idx) => (
                         <div key={idx} onClick={() => selectStation(st, 'end')} className="p-4 rounded-xl hover:bg-accent/10 cursor-pointer flex items-center justify-between border-b border-white/5 last:border-none transition-colors group">
                           <div className="flex items-center gap-3">

@@ -149,7 +149,38 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
 
   let lastError = '인증키가 설정되지 않았습니다.'
 
-  // 1순위: 서울시 열린데이터 광장 (빠름, 서울 버스 전용)
+  // 1순위: ODsay API (통합 서비스 - 가장 안정적)
+  if (arsId && env.VITE_ODSAY_API_KEY) {
+    try {
+      // 1. arsId로 ODsay 내부 stationID 찾기
+      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${arsId}&apiKey=${env.VITE_ODSAY_API_KEY}`
+      const searchData = await proxyFetch(searchUrl, 8000) as any
+      const stations = searchData.result?.station || []
+      // arsID가 정확히 일치하거나 이름이 포함된 정류장 찾기
+      const targetStation = stations.find((s: any) => s.arsID === arsId || s.stationName.includes(arsId))
+
+      if (targetStation?.stationID) {
+        // 2. 실시간 정보 호출
+        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${env.VITE_ODSAY_API_KEY}`
+        const odsayData = await proxyFetch(arrivalUrl, 10000) as any
+        
+        if (odsayData.result?.real) {
+          const arrivals: BusArrival[] = odsayData.result.real.map((item: any) => ({
+            rtNm: item.routeNm || '',
+            arrmsg1: item.arrivalMsg || '정보 없음',
+            arrmsg2: '',
+            stNm: targetStation.stationName || '',
+            adirection: item.nextStationName ? `${item.nextStationName} 방면` : ''
+          }))
+          return { ok: true, data: arrivals, error: null }
+        }
+      }
+    } catch (err: any) {
+      lastError = `ODsay API 오류: ${err.message}`
+    }
+  }
+
+  // 2순위: 서울시 열린데이터 광장 (빠름, 서울 버스 전용)
   if (arsId && arsId.length === 5 && seoulKeys.length > 0) {
     for (const key of seoulKeys) {
       try {
@@ -167,17 +198,13 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
           }))
           return { ok: true, data: arrivals, error: null }
         }
-        
-        if (root?.RESULT?.CODE && root.RESULT.CODE !== 'INFO-000') {
-          lastError = `서울시 API 오류: ${root.RESULT.MESSAGE} (${root.RESULT.CODE})`
-        }
       } catch (err: any) {
-        lastError = `서울시 연결 오류: ${err.message}`
+        // 무시하고 다음 엔진 시도
       }
     }
   }
 
-  // 2순위: 국가 공공데이터 포털 (전국구)
+  // 3순위: 국가 공공데이터 포털 (최우전 대비용 백업)
   if (stId && portalKeys.length > 0) {
     for (const key of portalKeys) {
       try {
@@ -199,42 +226,11 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
             }))
             return { ok: true, data: arrivals, error: null }
           }
-        } else {
-          lastError = `공공포털 오류: ${header?.headerMsg || header?.errMsg || '인증 실패'} (${header?.headerCd || header?.returnCode})`
         }
       } catch (err: any) {
-        lastError = `공공포털 연결 오류: ${err.message}`
+        // 마지막 에러 기록
+        lastError = `공공포털 연결 실패: ${err.message}`
       }
-    }
-  }
-
-  // 3순위: ODsay API (통합 서비스 - 공공데이터 실패 시 구원투수)
-  if (arsId && env.VITE_ODSAY_API_KEY) {
-    try {
-      // 1. arsId로 ODsay 내부 stationID 찾기
-      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${arsId}&apiKey=${env.VITE_ODSAY_API_KEY}`
-      const searchData = await proxyFetch(searchUrl, 8000) as any
-      const stations = searchData.result?.station || []
-      const targetStation = stations.find((s: any) => s.arsID === arsId || s.stationName.includes(arsId))
-
-      if (targetStation?.stationID) {
-        // 2. 실시간 정보 호출
-        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${env.VITE_ODSAY_API_KEY}`
-        const odsayData = await proxyFetch(arrivalUrl, 10000) as any
-        
-        if (odsayData.result?.real) {
-          const arrivals: BusArrival[] = odsayData.result.real.map((item: any) => ({
-            rtNm: item.routeNm || '',
-            arrmsg1: item.arrivalMsg || '정보 없음',
-            arrmsg2: '',
-            stNm: targetStation.stationName || '',
-            adirection: item.nextStationName ? `${item.nextStationName} 방면` : ''
-          }))
-          return { ok: true, data: arrivals, error: null }
-        }
-      }
-    } catch (err: any) {
-      lastError = `ODsay 연결 오류: ${err.message}`
     }
   }
 
