@@ -149,22 +149,26 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
   let lastError = '안정적인 엔진(ODsay)의 인증키가 설정되지 않았습니다. Vercel 설정을 확인해주세요.'
 
   // 1순위: ODsay API (통합 서비스 - 가장 안정적)
-  const odsayKey = env.VITE_ODSAY_API_KEY
-  if (odsayKey && (arsId || stId || stationName)) {
+  const odsayKey = import.meta.env.VITE_ODSAY_API_KEY?.replace(/['"]/g, '').trim()
+  if (odsayKey && (odsayStationId || arsId || stId || stationName)) {
     try {
-      const query = arsId || stId || stationName
-      // 1. arsId 또는 이름으로 ODsay 내부 stationID 찾기
-      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${encodeURIComponent(query || '')}&apiKey=${odsayKey}`
-      const searchData = await proxyFetch(searchUrl, 8000) as any
-      const stations = searchData.result?.station || []
+      let finalStationId = odsayStationId;
       
-      // 우선적으로 arsID 매칭, 없으면 이름 매칭, 최후에 첫번째 결과
-      const targetStation = stations.find((s: any) => s.arsID === arsId) || 
-                            stations.find((s: any) => stationName && s.stationName.includes(stationName)) ||
-                            stations[0]
+      // 만약 ODsay stationID가 직접 전달되지 않았다면 기존처럼 검색
+      if (!finalStationId) {
+        const query = arsId || stId || stationName
+        const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${encodeURIComponent(query || '')}&apiKey=${odsayKey}&_t=${Date.now()}`
+        const searchData = await proxyFetch(searchUrl, 8000) as any
+        const stations = searchData.result?.station || []
+        
+        const targetStation = stations.find((s: any) => s.arsID === arsId) || 
+                              stations.find((s: any) => stationName && s.stationName.includes(stationName)) ||
+                              stations[0]
+        finalStationId = targetStation?.stationID
+      }
 
-      if (targetStation?.stationID) {
-        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${odsayKey}`
+      if (finalStationId) {
+        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${finalStationId}&apiKey=${odsayKey}&_t=${Date.now()}`
         const odsayData = await proxyFetch(arrivalUrl, 10000) as any
         
         if (odsayData.result?.real) {

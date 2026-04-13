@@ -25,11 +25,12 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
         // 버스
         const arsId = path.startArsID ? String(path.startArsID) : ''
         const stId = (path.startLocalStationID || path.startID) ? String(path.startLocalStationID || path.startID) : ''
+        const odsayStationId = path.startID ? String(path.startID) : ''
         
         if (arsId || stId) {
           const mainId = arsId || stId
           const key = `bus_${mainId}`
-          results[key] = await getRealtimeBus(arsId, stId, path.startName)
+          results[key] = await getRealtimeBus(arsId, stId, path.startName, odsayStationId)
         }
       }
     }
