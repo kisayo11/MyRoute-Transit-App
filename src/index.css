@@ -2,19 +2,77 @@
 
 @theme {
   --color-primary: #aa3bff;
-  --color-primary-bg: rgba(170, 59, 255, 0.1);
-  --color-background: #ffffff;
-  --color-background-dark: #16171d;
+  --color-primary-light: #c07df7;
+  --color-primary-dark: #8a2be2;
+  --color-accent: #22d3ee;
+  --color-success: #7ee787;
+  --color-warning: #facc15;
+  --color-danger: #ff4d4d;
+  
+  --color-background: #f8f9fc;
+  --color-background-dark: #0f1014;
+  
   --color-text-main: #08060d;
   --color-text-main-dark: #f3f4f6;
   --color-text-sub: #6b6375;
-  --color-text-sub-dark: #9ca3af;
-  --color-border-color: #e5e4e7;
-  --color-border-dark: #2e303a;
+  --color-text-sub-dark: #979ba5;
+  
+  --color-border: #e2e8f0;
+  --color-border-dark: #242630;
+
+  --animate-pulse-glow: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 3s ease-in-out infinite;
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; filter: drop-shadow(0 0 5px rgba(170, 59, 255, 0.5)); }
+    50% { opacity: 0.7; filter: drop-shadow(0 0 15px rgba(170, 59, 255, 0.8)); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
 }
 
 @layer base {
   body {
-    @apply bg-background text-text-main dark:bg-background-dark dark:text-text-main-dark font-sans antialiased transition-colors duration-300;
+    @apply bg-background text-text-main dark:bg-background-dark dark:text-text-main-dark font-sans antialiased selection:bg-primary/30;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-black;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl border border-white/20 dark:border-white/[0.05] shadow-sm;
+  }
+  
+  .glass-card-hover {
+    @apply transition-all duration-300 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1;
+  }
+  
+  .premium-gradient {
+    @apply bg-gradient-to-br from-primary via-primary-dark to-[#7a28cb];
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .live-pulse {
+    @apply w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(126,231,135,0.6)];
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-white/10 rounded-full hover:bg-gray-400 dark:hover:bg-white/20 transition-all;
 }

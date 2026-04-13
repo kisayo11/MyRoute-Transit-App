@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { searchPubTransPath, searchStation } from '../lib/odsay'
 import { supabase } from '../lib/supabase'
-import { ArrowLeft, Search, MapPin, TrainFront, PersonStanding, Bus } from 'lucide-react'
+import { ArrowLeft, Search, MapPin, TrainFront, PersonStanding, Bus, CheckCircle2, AlertCircle, ChevronRight, Zap } from 'lucide-react'
 // Route type will be used later if needed
 
 export default function SearchRoute({ session, onBack, onRequestAuth }: { 
@@ -153,84 +153,125 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-[100dvh] bg-background dark:bg-background-dark pt-8 p-6 flex flex-col pb-20">
-      <button onClick={step === 1 ? onBack : () => {setStep(1); setSelectedPath(null);}} className="mb-6 flex items-center text-text-sub dark:text-text-sub-dark px-2 font-medium">
-        <ArrowLeft size={18} className="mr-1.5" /> 뒤로가기
+    <div className="max-w-md mx-auto min-h-[100dvh] bg-background dark:bg-background-dark pt-12 p-6 flex flex-col pb-24">
+      <button 
+        onClick={step === 1 ? onBack : () => {setStep(1); setSelectedPath(null);}} 
+        className="mb-8 w-fit flex items-center gap-2 px-4 py-2 glass-card glass-card-hover rounded-2xl text-[10px] font-black text-text-sub dark:text-text-sub-dark uppercase tracking-[0.2em]"
+      >
+        <ArrowLeft size={14} strokeWidth={3} /> {step === 1 ? 'Go Back' : 'Change Points'}
       </button>
 
       {step === 1 && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-3xl font-black mb-6 tracking-tight">경로 조립</h2>
+        <div className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <div className="mb-10">
+            <h2 className="text-4xl font-black tracking-tighter text-gradient leading-tight mb-2">Build Your Route</h2>
+            <p className="text-sm font-bold text-text-sub dark:text-text-sub-dark">나만의 출근길/퇴근길 블록을 정교하게 조립하세요</p>
+          </div>
           
-          <div className="space-y-6 relative">
+          <div className="space-y-8">
             
-            {/* STEP 1 */}
-            <div className="bg-black/5 dark:bg-white/5 p-6 rounded-[2rem] border border-border/50 dark:border-border-dark/50">
-              <h3 className="text-xs font-black text-primary mb-3 flex items-center uppercase tracking-wider"><PersonStanding size={16} className="mr-1"/> 출발 장소 및 도보</h3>
-              <div className="space-y-3">
-                <input 
-                  className="w-full bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold"
-                  value={startPlaceName} onChange={(e) => setStartPlaceName(e.target.value)} placeholder="집 (별칭)"
-                />
-                <div className="flex items-center space-x-3 text-sm font-bold text-text-sub dark:text-text-sub-dark">
-                  <span>도보</span>
-                  <input type="number" min="0" className="w-[4rem] text-center bg-white dark:bg-[#1a1b22] border-none px-2 py-2.5 rounded-xl focus:ring-2 focus:ring-primary/50" value={walkToStationMins || ''} onChange={(e) => setWalkToStationMins(Number(e.target.value))} placeholder="0"/>
-                  <span>분 소요</span>
+            {/* STEP 1: 출발 설정 */}
+            <div className="glass-card rounded-[2.5rem] p-8 border-primary/10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 premium-gradient text-white rounded-2xl shadow-lg shadow-primary/20">
+                  <PersonStanding size={20} strokeWidth={3} />
                 </div>
+                <h3 className="text-sm font-black text-text-main dark:text-text-main-dark uppercase tracking-widest">Departure Block</h3>
               </div>
-            </div>
-
-            {/* STEP 2 */}
-            <div className="bg-primary-bg p-6 rounded-[2.5rem] border border-primary/20 shadow-sm relative">
-              <h3 className="text-xs font-black text-primary mb-4 flex items-center uppercase tracking-wider"><TrainFront size={16} className="mr-1"/> 탑승 및 하차역</h3>
               
               <div className="space-y-4">
+                <div className="group">
+                  <label className="text-[10px] font-black text-primary uppercase ml-1 mb-1.5 block tracking-widest opacity-70 group-focus-within:opacity-100 transition-opacity">Alias (출발지 별칭)</label>
+                  <input 
+                    className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 px-5 py-4 rounded-2xl text-sm font-black transition-all outline-none"
+                    value={startPlaceName} onChange={(e) => setStartPlaceName(e.target.value)} placeholder="집/회사/카페..."
+                  />
+                </div>
+                
+                <div className="flex items-center gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                  <div className="text-[11px] font-black text-text-sub dark:text-text-sub-dark whitespace-nowrap uppercase tracking-widest">In-house Walk</div>
+                  <div className="flex-1 flex items-center justify-end gap-2">
+                    <input type="number" min="0" className="w-16 text-center bg-white dark:bg-background-dark border border-primary/20 px-2 py-2 rounded-xl text-sm font-black outline-none" value={walkToStationMins || ''} onChange={(e) => setWalkToStationMins(Number(e.target.value))} placeholder="0"/>
+                    <span className="text-xs font-black text-text-sub uppercase">Min</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* STEP 2: 대중교통 노드 */}
+            <div className="glass-card rounded-[2.5rem] p-8 border-accent/10 relative overflow-hidden">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-accent/20 text-accent rounded-2xl">
+                  <TrainFront size={20} strokeWidth={3} />
+                </div>
+                <h3 className="text-sm font-black text-text-main dark:text-text-main-dark uppercase tracking-widest">Transit Nodes</h3>
+              </div>
+              
+              <div className="space-y-5 relative z-10">
+                {/* 출발역 */}
                 <div className="relative">
+                  <label className="text-[10px] font-black text-accent uppercase ml-1 mb-1.5 block tracking-widest opacity-70">On-Board Station</label>
                   <div className="flex gap-2">
-                    <input className="flex-1 bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold" value={startQuery} onChange={(e) => setStartQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(startQuery, 'start')} placeholder="탑승역 (예: 구의역)"/>
-                    <button onClick={() => handleSearchStation(startQuery, 'start')} className="px-4 bg-primary text-white rounded-xl active:scale-90 transition-all"><Search size={18} /></button>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-sub/50" size={16} />
+                      <input 
+                        className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-accent/30 pl-11 pr-5 py-4 rounded-2xl text-sm font-black transition-all outline-none" 
+                        value={startQuery} onChange={(e) => setStartQuery(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(startQuery, 'start')} 
+                        placeholder="탑승할 역/정류장"
+                      />
+                    </div>
+                    <button onClick={() => handleSearchStation(startQuery, 'start')} className="p-4 bg-accent/20 text-accent rounded-2xl hover:bg-accent/30 active:scale-90 transition-all cursor-pointer"><Search size={20} strokeWidth={3} /></button>
                   </div>
                   {startResults.length > 0 && (
-                    <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
+                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass-card rounded-2xl shadow-2xl z-30 max-h-60 overflow-y-auto p-2 border-accent/20">
                       {startResults.map((st, idx) => (
-                        <div key={idx} onClick={() => selectStation(st, 'start')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer flex flex-col">
-                          <div className="flex items-center text-sm font-bold">
-                            {st.stationClass === 1 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
-                             st.stationClass === 2 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
-                             <MapPin size={16} className="text-primary mr-2" />} 
-                            {st.stationName}
-                          </div>
-                          {(st.laneName || st.arsID) && (
-                            <div className="text-[10.5px] font-medium text-gray-500 dark:text-gray-400 mt-1 pl-6">
-                              {st.laneName}{st.laneName && st.arsID ? ' | ' : ''}{st.arsID ? `ID: ${st.arsID}` : ''}
+                        <div key={idx} onClick={() => selectStation(st, 'start')} className="p-4 rounded-xl hover:bg-accent/10 cursor-pointer flex items-center justify-between border-b border-white/5 last:border-none transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${st.stationClass === 1 ? 'bg-success/10 text-success' : 'bg-purple-500/10 text-purple-600'}`}>
+                              {st.stationClass === 1 ? <Bus size={16} strokeWidth={3} /> : <TrainFront size={16} strokeWidth={3} />}
                             </div>
-                          )}
+                            <div>
+                              <div className="text-sm font-black group-hover:text-accent transition-colors">{st.stationName}</div>
+                              <div className="text-[10px] font-bold text-text-sub opacity-60 mt-0.5">{st.laneName || '대중교통'} • {st.arsID || 'No ID'}</div>
+                            </div>
+                          </div>
+                          <ArrowLeft className="rotate-180 text-text-sub/30 group-hover:text-accent" size={14} />
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
+                {/* 하차역 */}
                 <div className="relative">
+                  <label className="text-[10px] font-black text-accent uppercase ml-1 mb-1.5 block tracking-widest opacity-70">Off-Board Station</label>
                   <div className="flex gap-2">
-                    <input className="flex-1 bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold" value={endQuery} onChange={(e) => setEndQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(endQuery, 'end')} placeholder="하차역 (예: 복정역)"/>
-                    <button onClick={() => handleSearchStation(endQuery, 'end')} className="px-4 bg-primary text-white rounded-xl active:scale-90 transition-all"><Search size={18} /></button>
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-sub/50" size={16} />
+                      <input 
+                        className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-accent/30 pl-11 pr-5 py-4 rounded-2xl text-sm font-black transition-all outline-none" 
+                        value={endQuery} onChange={(e) => setEndQuery(e.target.value)} 
+                        onKeyDown={(e) => e.key === 'Enter' && handleSearchStation(endQuery, 'end')} 
+                        placeholder="하차할 역/정류장"
+                      />
+                    </div>
+                    <button onClick={() => handleSearchStation(endQuery, 'end')} className="p-4 bg-accent/20 text-accent rounded-2xl hover:bg-accent/30 active:scale-90 transition-all cursor-pointer"><Search size={20} strokeWidth={3} /></button>
                   </div>
                   {endResults.length > 0 && (
-                    <div className="absolute top-14 left-0 right-0 bg-white dark:bg-[#202129] border border-border dark:border-border-dark rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto">
+                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 glass-card rounded-2xl shadow-2xl z-30 max-h-60 overflow-y-auto p-2 border-accent/20">
                       {endResults.map((st, idx) => (
-                        <div key={idx} onClick={() => selectStation(st, 'end')} className="p-3 border-b border-border/50 dark:border-border-dark/50 hover:bg-primary/10 cursor-pointer flex flex-col">
-                          <div className="flex items-center text-sm font-bold">
-                            {st.stationClass === 1 ? <Bus size={16} className="text-[#34C759] mr-2" /> : 
-                             st.stationClass === 2 ? <TrainFront size={16} className="text-[#AF52DE] mr-2" /> : 
-                             <MapPin size={16} className="text-primary mr-2" />} 
-                            {st.stationName}
-                          </div>
-                          {(st.laneName || st.arsID) && (
-                            <div className="text-[10.5px] font-medium text-gray-500 dark:text-gray-400 mt-1 pl-6">
-                              {st.laneName}{st.laneName && st.arsID ? ' | ' : ''}{st.arsID ? `ID: ${st.arsID}` : ''}
+                        <div key={idx} onClick={() => selectStation(st, 'end')} className="p-4 rounded-xl hover:bg-accent/10 cursor-pointer flex items-center justify-between border-b border-white/5 last:border-none transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${st.stationClass === 1 ? 'bg-success/10 text-success' : 'bg-purple-500/10 text-purple-600'}`}>
+                              {st.stationClass === 1 ? <Bus size={16} strokeWidth={3} /> : <TrainFront size={16} strokeWidth={3} />}
                             </div>
-                          )}
+                            <div>
+                              <div className="text-sm font-black group-hover:text-accent transition-colors">{st.stationName}</div>
+                              <div className="text-[10px] font-bold text-text-sub opacity-60 mt-0.5">{st.laneName || '대중교통'} • {st.arsID || 'No ID'}</div>
+                            </div>
+                          </div>
+                          <ArrowLeft className="rotate-180 text-text-sub/30 group-hover:text-accent" size={14} />
                         </div>
                       ))}
                     </div>
@@ -239,34 +280,46 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
               </div>
             </div>
 
-            {/* STEP 3 */}
-            <div className="bg-black/5 dark:bg-white/5 p-5 rounded-3xl border border-border/50 dark:border-border-dark/50 relative">
-              <h3 className="text-sm font-extrabold text-primary mb-3 flex items-center"><PersonStanding size={18} className="mr-1"/> 도착 걷기 및 최종 장소 (선택)</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3 text-sm font-bold text-text-sub dark:text-text-sub-dark">
-                   <span>내려서 도착지까지</span>
-                  <input type="number" min="0" className="w-[4.5rem] text-center bg-white dark:bg-[#1a1b22] border-none px-2 py-3 rounded-xl focus:ring-2 focus:ring-primary/50 text-black dark:text-white" value={walkFromStationMins || ''} onChange={(e) => setWalkFromStationMins(Number(e.target.value))} placeholder="0"/>
-                  <span>분 걸음</span>
+            {/* STEP 3: 도착 설정 */}
+            <div className="glass-card rounded-[2.5rem] p-8 border-success/10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 bg-success/20 text-success rounded-2xl">
+                  <CheckCircle2 size={20} strokeWidth={3} />
                 </div>
-                <input 
-                  className="w-full bg-white dark:bg-[#1a1b22] border-none px-4 py-3.5 rounded-xl focus:ring-2 focus:ring-primary/50 text-sm font-bold"
-                  value={endPlaceName} onChange={(e) => setEndPlaceName(e.target.value)} placeholder="최종 도착지 이름 (예: 복정 오피스텔)"
-                />
+                <h3 className="text-sm font-black text-text-main dark:text-text-main-dark uppercase tracking-widest">Arrival Block</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 bg-success/5 rounded-2xl border border-success/10">
+                  <div className="text-[11px] font-black text-text-sub dark:text-text-sub-dark whitespace-nowrap uppercase tracking-widest">Last Mile Walk</div>
+                  <div className="flex-1 flex items-center justify-end gap-2">
+                    <input type="number" min="0" className="w-16 text-center bg-white dark:bg-background-dark border border-success/20 px-2 py-2 rounded-xl text-sm font-black outline-none" value={walkFromStationMins || ''} onChange={(e) => setWalkFromStationMins(Number(e.target.value))} placeholder="0"/>
+                    <span className="text-xs font-black text-text-sub uppercase">Min</span>
+                  </div>
+                </div>
+
+                <div className="group">
+                  <label className="text-[10px] font-black text-success uppercase ml-1 mb-1.5 block tracking-widest opacity-70 group-focus-within:opacity-100 italic transition-opacity">Final Destination Name</label>
+                  <input 
+                    className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-success/30 px-5 py-4 rounded-2xl text-sm font-black transition-all outline-none"
+                    value={endPlaceName} onChange={(e) => setEndPlaceName(e.target.value)} placeholder="최종 도착지 이름 (예: 복정 빌딩)"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="pt-2">
-              {!startStation || !endStation ? (
-                <div className="text-[11px] font-bold text-red-500/70 text-center mb-3 animate-pulse uppercase tracking-tight">
-                   ⚠ 탑승/하차 지점에서 '검색' 후 리스트의 역을 선택해주세요!
+            <div className="pt-4">
+              {(!startStation || !endStation) && (
+                <div className="flex items-center justify-center gap-2 text-[11px] font-black text-danger uppercase tracking-widest mb-5 animate-pulse">
+                  <AlertCircle size={14} /> Please select both stations to proceed
                 </div>
-              ) : null}
+              )}
               <button 
                 disabled={loading || !startStation || !endStation}
                 onClick={handleFindPath} 
-                className="w-full bg-black dark:bg-white text-white dark:text-black font-extrabold py-5 rounded-3xl shadow-2xl disabled:opacity-20 transition-all hover:scale-[1.02] active:scale-95 text-xl"
+                className="w-full premium-gradient text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-primary/40 disabled:opacity-20 transition-all hover:shadow-primary/50 active:scale-[0.98] text-xl tracking-tighter"
               >
-                {loading ? '검색 중...' : '블록 조립 완료! 소요시간 계산'}
+                {loading ? 'CALCULATING PATH...' : 'ASSEMBLE COMPLETE — CALCULATE'}
               </button>
             </div>
           </div>
@@ -274,27 +327,47 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
       )}
 
       {step === 2 && (
-        <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-          <h2 className="text-3xl font-extrabold mb-2 tracking-tight">계산 완료! 👏</h2>
-          <p className="text-sm text-text-sub dark:text-text-sub-dark mb-8 font-medium">대중교통을 어떻게 탈 건지 고르시면 코스가 완성됩니다.</p>
+        <div className="animate-in fade-in slide-in-from-right-6 duration-700">
+          <div className="mb-8">
+            <h2 className="text-4xl font-black tracking-tighter text-gradient mb-2">Select Your Path</h2>
+            <p className="text-sm font-bold text-text-sub dark:text-text-sub-dark">최적의 경로를 선택하여 내 서랍에 저장하세요</p>
+          </div>
           
-          <div className="mb-6 p-6 bg-background dark:bg-white/5 border border-primary/20 rounded-[2rem] shadow-sm">
-            <p className="font-extrabold text-sm mb-5 flex items-center tracking-tight text-primary uppercase">
-              맞춤형 풀코스 진행 요약
-            </p>
-            <div className="flex flex-col space-y-3 text-sm font-bold">
-               <div className="flex items-center text-text-sub dark:text-text-sub-dark"><PersonStanding size={16} className="mr-2"/> 출발지 ➔ 도보 {walkToStationMins || 0}분 ➔ {startStation.stationName} 도착</div>
-               <div className="flex items-center text-black dark:text-white"><TrainFront size={16} className="mr-2 text-primary"/> 지하철/버스 환승 이동 ➔ {endStation.stationName} 하차</div>
-               <div className="flex items-center text-text-sub dark:text-text-sub-dark"><PersonStanding size={16} className="mr-2"/> 하차 후 ➔ 도보 {walkFromStationMins || 0}분 ➔ 최종 도착</div>
+          <div className="mb-10 p-8 glass-card rounded-[2.5rem] border-primary/20 relative overflow-hidden bg-gradient-to-br from-primary/5 to-transparent">
+            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-6">Route Assembly Summary</h4>
+            <div className="space-y-4">
+               <div className="flex items-start gap-4">
+                 <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary mt-0.5"><MapPin size={12} strokeWidth={3}/></div>
+                 <div className="text-sm font-black text-text-sub">
+                   {startPlaceName} <ChevronRight size={10} className="inline opacity-30 mx-1"/> <span className="text-text-main dark:text-text-main-dark">{startStation.stationName} (도보 {walkToStationMins || 0}분)</span>
+                 </div>
+               </div>
+               <div className="flex items-start gap-4">
+                 <div className="w-6 h-6 rounded-full bg-accent/10 flex items-center justify-center text-accent mt-0.5"><Zap size={12} strokeWidth={3}/></div>
+                 <div className="text-sm font-black text-text-main dark:text-text-main-dark">Transit Interval Tracking Activated</div>
+               </div>
+               <div className="flex items-start gap-4">
+                 <div className="w-6 h-6 rounded-full bg-success/10 flex items-center justify-center text-success mt-0.5"><CheckCircle2 size={12} strokeWidth={3}/></div>
+                 <div className="text-sm font-black text-text-sub">
+                   {endStation.stationName} <ChevronRight size={10} className="inline opacity-30 mx-1"/> <span className="text-text-main dark:text-text-main-dark">{endPlaceName} (도보 {walkFromStationMins || 0}분)</span>
+                 </div>
+               </div>
             </div>
-            <div className="mt-6 pt-5 border-t border-border/50 dark:border-white/10 font-bold">
-              <label className="text-xs text-primary mb-2 block pl-1">완성된 전체 루트에 멋진 별명을 지어주세요!</label>
+
+            <div className="mt-8 pt-8 border-t border-white/10">
+              <label className="text-[10px] font-black text-primary uppercase ml-1 mb-3 block tracking-widest opacity-70">Define Route Identity</label>
               <input 
-                className="w-full bg-black/5 dark:bg-white/10 border-none px-5 py-4 rounded-xl focus:ring-2 focus:ring-primary text-base font-bold placeholder:font-normal placeholder:opacity-50"
+                className="w-full bg-white dark:bg-background-dark border border-primary/20 focus:border-primary/50 px-6 py-4 rounded-2xl text-lg font-black transition-all outline-none shadow-sm"
                 value={routeName} onChange={(e) => setRouteName(e.target.value)} placeholder="예: 구의동 꿀잠 출근길" autoFocus
               />
             </div>
+            
+            <div className="absolute -left-10 -bottom-10 opacity-[0.03] rotate-12">
+              <Zap size={180} strokeWidth={1} />
+            </div>
           </div>
+
+          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-text-sub opacity-40 mb-6 pl-1">Available Trajectories</h3>
 
           <div className="space-y-4">
             {paths.map((p, idx) => {
@@ -306,20 +379,25 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
                 <div 
                   key={idx} 
                   onClick={() => { setSelectedPath(p); handleSaveRoute(); }}
-                  className={`p-6 bg-white dark:bg-[#1a1b22] border rounded-[2rem] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] cursor-pointer hover:border-primary/50 transition-all relative ${selectedPath?.info?.mapObj === p.info.mapObj ? 'border-primary shadow-lg' : 'border-border dark:border-white/5'}`}
+                  className="group p-8 glass-card glass-card-hover rounded-[2.5rem] cursor-pointer flex items-center justify-between gap-6"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-3xl font-black flex items-end tracking-tighter text-primary">
-                      {customTotalMins} <span className="text-sm mb-1 ml-1 font-bold text-text-sub">분 (총 계산)</span>
-                    </span>
-                    <span className="text-xs bg-black/5 dark:bg-white/10 font-bold px-3 py-1.5 rounded-full">
-                      대중교통 환승 {transitCount}회
-                    </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-extrabold rounded-full uppercase tracking-tighter">
+                        {transitCount} Transits
+                      </span>
+                      <span className="text-[10px] font-bold text-text-sub opacity-40 italic">Global Path #{idx + 1}</span>
+                    </div>
+                    <div className="text-sm font-black text-text-main dark:text-text-main-dark leading-snug truncate group-hover:text-primary transition-colors">
+                      {summary}
+                    </div>
                   </div>
                   
-                  <div className="text-[14px] font-bold tracking-tight text-text-main dark:text-text-main-dark leading-snug">
-                    <span className="opacity-50 text-xs block mb-1">대중교통 탑승 노선:</span>
-                    {summary}
+                  <div className="text-right flex flex-col items-end">
+                    <div className="flex items-baseline gap-1 group-hover:scale-110 transition-transform origin-right">
+                      <span className="text-5xl font-black text-primary tracking-tighter leading-none">{customTotalMins}</span>
+                      <span className="text-sm font-black text-text-sub opacity-40 tracking-tighter uppercase">Min</span>
+                    </div>
                   </div>
                 </div>
               )

@@ -139,7 +139,7 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
   const seoulKeys = [
     env.VITE_PUBLIC_SEOUL_BUS_API_KEY,
     env.VITE_PUBLIC_BUS_API_KEY,
-    env.VITE_PUBLIC_SUBWAY_API_KEY // 서울시는 가끔 범용 키를 사용함
+    env.VITE_PUBLIC_SUBWAY_API_KEY
   ].filter(Boolean) as string[]
 
   const portalKeys = [
@@ -154,11 +154,11 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
     for (const key of seoulKeys) {
       try {
         const seoulUrl = `http://openAPI.seoul.go.kr:8088/${key}/json/getArrInfoByArsId/1/10/${arsId}`
-        const data = await proxyFetch(seoulUrl, 10000)
+        const data = await proxyFetch(seoulUrl, 10000) as any
         
         const root = data.getArrInfoByArsId || data.GetArrInfoByArsId
         if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
-          const arrivals: BusArrival[] = root.row.map((item: Record<string, unknown>) => ({
+          const arrivals: BusArrival[] = root.row.map((item: any) => ({
             rtNm: item.rtNm || '',
             arrmsg1: item.arrmsg1 || '정보 없음',
             arrmsg2: item.arrmsg2 || '',
@@ -181,9 +181,8 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
   if (stId && portalKeys.length > 0) {
     for (const key of portalKeys) {
       try {
-        // 'List' 접미사를 제거하여 404 오류 해결
         const portalUrl = `http://ws.bus.go.kr/api/rest/arrive/getLowArrInfoByStId?serviceKey=${key}&stId=${stId}&resultType=json`
-        const data = await proxyFetch(portalUrl, 15000)
+        const data = await proxyFetch(portalUrl, 15000) as any
 
         const header = data.msgHeader || data.comMsgHeader
         if (header?.headerCd === '0' || header?.returnCode === '00') {
@@ -191,10 +190,10 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
           const itemList = Array.isArray(items) ? items : items ? [items] : []
           
           if (itemList.length > 0) {
-            const arrivals: BusArrival[] = itemList.map((item: Record<string, unknown>) => ({
+            const arrivals: BusArrival[] = itemList.map((item: any) => ({
               rtNm: item.rtNm || '',
               arrmsg1: item.arrmsg1 || '정보 없음',
-              arrmsg2: item.arrmsg2 || '',
+              arrmsg2: item.arrmsg1 || '',
               stNm: item.stNm || '',
               adirection: item.adirection || ''
             }))
@@ -204,8 +203,86 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
           lastError = `공공포털 오류: ${header?.headerMsg || header?.errMsg || '인증 실패'} (${header?.headerCd || header?.returnCode})`
         }
       } catch (err: any) {
-        // 404 등 네트워크 오류 발생 시 무시하고 다음 키/시스템으로 넘어감
         lastError = `공공포털 연결 오류: ${err.message}`
+      }
+    }
+  }
+
+  // 3순위: ODsay API (통합 서비스 - 공공데이터 실패 시 구원투수)
+  if (arsId && env.VITE_ODSAY_API_KEY) {
+    try {
+      // 1. arsId로 ODsay 내부 stationID 찾기
+      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${arsId}&apiKey=${env.VITE_ODSAY_API_KEY}`
+      const searchData = await proxyFetch(searchUrl, 8000) as any
+      const stations = searchData.result?.station || []
+      const targetStation = stations.find((s: any) => s.arsID === arsId || s.stationName.includes(arsId))
+
+      if (targetStation?.stationID) {
+        // 2. 실시간 정보 호출
+        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${env.VITE_ODSAY_API_KEY}`
+        const odsayData = await proxyFetch(arrivalUrl, 10000) as any
+        
+        if (odsayData.result?.real) {
+          const arrivals: BusArrival[] = odsayData.result.real.map((item: any) => ({
+            rtNm: item.routeNm || '',
+            arrmsg1: item.arrivalMsg || '정보 없음',
+            arrmsg2: '',
+            stNm: targetStation.stationName || '',
+            adirection: item.nextStationName ? `${item.nextStationName} 방면` : ''
+          }))
+          return { ok: true, data: arrivals, error: null }
+        }
+      }
+    } catch (err: any) {
+      lastError = `ODsay 연결 오류: ${err.message}`
+    }
+  }
+
+  return { ok: false, data: [], error: lastError }
+}
+
+/**
+ * 실시간 버스 위치 정보 조회 (노선별)
+ * @param busRouteId 버스 노선 ID
+ */
+export async function getBusLocation(busRouteId: string): Promise<RealtimeResult<any>> {
+  const env = import.meta.env
+  const seoulKeys = [env.VITE_PUBLIC_SEOUL_BUS_API_KEY, env.VITE_PUBLIC_BUS_API_KEY].filter(Boolean) as string[]
+  const portalKeys = [env.VITE_PUBLIC_DATA_BUS_API_KEY, env.VITE_PUBLIC_BUS_API_KEY].filter(Boolean) as string[]
+
+  let lastError = '노선 ID 또는 인증키가 없습니다.'
+
+  // 1. 서울시 API 시도
+  if (busRouteId && seoulKeys.length > 0) {
+    for (const key of seoulKeys) {
+      try {
+        const url = `http://openAPI.seoul.go.kr:8088/${key}/json/getBusPosByRtid/1/100/${busRouteId}`
+        const data = await proxyFetch(url, 10000) as any
+        const root = data.getBusPosByRtid || data.GetBusPosByRtid
+        
+        if (root?.RESULT?.CODE === 'INFO-000' && root.row?.length > 0) {
+          return { ok: true, data: root.row, error: null }
+        }
+      } catch (err: any) {
+        lastError = err.message
+      }
+    }
+  }
+
+  // 2. 공공데이터포털 API 시도
+  if (busRouteId && portalKeys.length > 0) {
+    for (const key of portalKeys) {
+      try {
+        const url = `http://ws.bus.go.kr/api/rest/buspos/getBusPosByRoute?serviceKey=${key}&busRouteId=${busRouteId}&resultType=json`
+        const data = await proxyFetch(url, 12000) as any
+        const header = data.msgHeader || data.comMsgHeader
+        
+        if (header?.headerCd === '0' || header?.returnCode === '00') {
+          const items = data.msgBody?.itemList || []
+          return { ok: true, data: Array.isArray(items) ? items : [items], error: null }
+        }
+      } catch (err: any) {
+        lastError = err.message
       }
     }
   }

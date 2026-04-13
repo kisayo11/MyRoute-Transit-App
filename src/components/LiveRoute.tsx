@@ -22,7 +22,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
         const key = `subway_${path.startName}`
         results[key] = await getRealtimeSubway(path.startName)
       } else if (path.trafficType === 2) {
-        // 버스 — arsID(5자리)와 stId(9자리)를 모두 추출하여 하이브리드 엔진에 전달
+        // 버스
         const arsId = path.startArsID ? String(path.startArsID) : ''
         const stId = (path.startLocalStationID || path.startID) ? String(path.startLocalStationID || path.startID) : ''
         
@@ -157,38 +157,65 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
       const result = realtimeData[key]
       const busNo = path.lane?.[0]?.busNo || '버스'
       const myBus = result?.ok ? result.data.filter((a: BusArrival) => a.rtNm === busNo) : []
+      
+      // 배차 및 정보 센스 있게 가공
+      const interval = path.busInterval || (result?.ok ? result.data[0]?.interval : null)
+      const isCentral = path.busOnlyCentralLane === 1
+      const lastBus = path.busLastTime
 
       return (
-        <div key={idx} className="relative pb-8 pl-12">
-          <div className="absolute w-4 h-4 bg-white dark:bg-[#16171d] border-4 border-green-500 rounded-full -left-[32px] top-1 z-10" />
-          <div className="absolute w-px h-full bg-green-200 dark:bg-green-900/40 -left-[25px] top-4" />
+        <div key={idx} className="relative pb-10 pl-12">
+          <div className="absolute w-4 h-4 bg-white dark:bg-background-dark border-4 border-success rounded-full -left-[32px] top-1 z-10" />
+          <div className="absolute w-px h-full bg-success/20 -left-[25px] top-4" />
 
-          <div className="flex items-center gap-2 mb-1">
-            <Bus size={18} className="text-green-500" />
-            <h4 className="font-bold text-lg text-green-600 dark:text-green-400">{path.startName}</h4>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-success/10 rounded-xl">
+                <Bus size={18} className="text-success" />
+              </div>
+              <h4 className="font-extrabold text-xl text-text-main dark:text-text-main-dark">{path.startName}</h4>
+            </div>
           </div>
 
-          <div className="flex gap-2 mb-3">
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-md font-mono">{busNo}번 버스</span>
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            <span className="px-2.5 py-1 text-[11px] font-black premium-gradient text-white rounded-lg shadow-sm">{busNo}번</span>
+            {isCentral && (
+              <span className="px-2 py-1 text-[10px] font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg">중앙차로</span>
+            )}
+            {interval && (
+              <span className="px-2 py-1 text-[10px] font-black bg-gray-500/10 text-text-sub dark:text-text-sub-dark border border-gray-500/10 rounded-lg">배차 {interval}분</span>
+            )}
+            {lastBus && (
+              <span className="px-2 py-1 text-[10px] font-black bg-danger/10 text-danger border border-danger/20 rounded-lg">막차 {lastBus}</span>
+            )}
           </div>
 
-          <div className="bg-green-50 dark:bg-green-900/10 rounded-xl p-3 border border-green-100 dark:border-green-900/30">
+          <div className="glass-card rounded-2xl p-4 relative overflow-hidden">
             {!isActive ? (
-              <p className="text-xs text-gray-400">GO LIVE 버튼을 눌러 실시간 정보 확인</p>
+              <p className="text-xs text-text-sub font-bold">GO LIVE를 누르면 실시간 위치를 추적합니다</p>
             ) : !result ? (
-              <div className="flex items-center gap-2 text-xs text-gray-400"><Loader2 size={12} className="animate-spin" /> 불러오는 중...</div>
+              <div className="flex items-center gap-2 text-xs font-bold text-text-sub animate-pulse"><RefreshCw size={12} className="animate-spin" /> 버스 위치 탐색 중...</div>
             ) : !result.ok ? (
-              <div className="flex items-center gap-2 text-xs text-red-400"><AlertCircle size={12} /> {result.error}</div>
+              <div className="flex items-center gap-2 text-xs font-bold text-danger"><AlertCircle size={12} /> {result.error}</div>
             ) : myBus.length === 0 ? (
-              <p className="text-xs text-gray-400">이 정류소에서 {busNo}번 버스 정보 없음</p>
+              <p className="text-xs text-text-sub font-bold">현재 운행 중인 {busNo}번 버스가 없습니다</p>
             ) : (
               myBus.slice(0, 2).map((a: BusArrival, i: number) => (
-                <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-2 pt-2 border-t border-green-100 dark:border-green-900/30' : ''}`}>
-                  <span className="text-xs text-gray-500">{a.adirection} 방향</span>
-                  <span className="text-sm font-bold text-green-600 dark:text-green-400">{a.arrmsg1}</span>
+                <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-3 pt-3 border-t border-white/5' : ''}`}>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase font-bold text-text-sub dark:text-text-sub-dark opacity-40 mb-0.5">Destination</span>
+                    <span className="text-xs font-black text-text-sub dark:text-text-sub-dark">{a.adirection} 방향</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-sm font-black ${a.arrmsg1.includes('전') ? 'text-danger' : 'text-success'}`}>{a.arrmsg1}</span>
+                  </div>
                 </div>
               ))
             )}
+            {/* 배경 패턴 (프리미엄 감성) */}
+            <div className="absolute top-0 right-0 p-1 opacity-[0.03] pointer-events-none">
+              <Bus size={60} strokeWidth={1} />
+            </div>
           </div>
         </div>
       )
@@ -198,72 +225,104 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-[100dvh] bg-background dark:bg-background-dark pt-8 p-5 pb-24 flex flex-col">
+    <div className="max-w-md mx-auto min-h-[100dvh] bg-background dark:bg-background-dark pt-12 p-5 pb-24 flex flex-col">
 
       {/* 상단 네비 */}
-      <button onClick={onBack} className="mb-6 flex items-center text-sm text-gray-400 hover:text-primary transition-colors font-semibold">
-        <ArrowLeft size={16} className="mr-1.5" /> 대시보드
+      <button onClick={onBack} className="mb-8 w-fit flex items-center gap-2 px-4 py-2 glass-card glass-card-hover rounded-2xl text-xs font-black text-text-sub dark:text-text-sub-dark uppercase tracking-widest">
+        <ArrowLeft size={14} strokeWidth={3} /> Dashboard
       </button>
 
       {/* 헤더 */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-black tracking-tight flex items-center flex-wrap gap-2">
-          {route.start_place || route.start_point?.nickname || route.start_point?.stationName || '출발'}
-          <ChevronRight size={18} className="text-gray-300" />
-          {route.end_place || route.end_point?.nickname || route.end_point?.stationName || '도착'}
-        </h2>
-        <div className="flex items-center gap-3 mt-2">
-          <span className="text-sm font-semibold text-gray-400">{route.route_name || route.name || '이름 없는 경로'}</span>
-          {lastUpdated && (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
-              <Clock size={10} />
-              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 동기화
-            </span>
-          )}
+      <div className="mb-10">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="text-3xl font-black tracking-tighter text-text-main dark:text-text-main-dark">
+            {route.route_name || route.name || '이름 없는 경로'}
+          </h2>
+          {isActive && <span className="live-pulse mt-1" />}
+        </div>
+        
+        <div className="flex items-center gap-2 text-text-sub dark:text-text-sub-dark">
+          <span className="text-sm font-bold">{route.start_place || route.start_point?.nickname || '시작'}</span>
+          <ChevronRight size={14} className="opacity-30" />
+          <span className="text-sm font-bold">{route.end_place || route.end_point?.nickname || '종료'}</span>
         </div>
       </div>
 
-      {/* 총 소요시간 배너 */}
-      <div className="mb-8 p-5 bg-primary/5 rounded-2xl border border-primary/20 flex items-baseline gap-2">
-        <span className="text-5xl font-black text-primary tracking-tight">{totalMins}</span>
-        <span className="text-sm font-bold text-gray-400">분 소요</span>
-        <div className="ml-auto text-xs text-gray-400">
-          환승 {(route.path_info?.info?.transitCount || 0)}회
+      {/* 실시간 요약 카드 */}
+      <div className="mb-10 p-1 glass-card rounded-[2.5rem] overflow-hidden">
+        <div className="p-8 premium-gradient text-white relative">
+          <div className="flex justify-between items-start relative z-10">
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-6xl font-black tracking-tighter">{totalMins}</span>
+                <span className="text-xl font-bold opacity-70 tracking-tighter uppercase">Min</span>
+              </div>
+              <p className="text-xs font-bold opacity-80 mt-1 uppercase tracking-widest flex items-center gap-2">
+                Total Journey Time
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
+                {route.path_info?.info?.transitCount || 0} Transits
+              </span>
+              {lastUpdated && (
+                <p className="text-[10px] font-bold opacity-60">
+                  Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              )}
+            </div>
+          </div>
+          {/* 장식용 패턴 */}
+          <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
+            <Navigation size={120} strokeWidth={1} />
+          </div>
         </div>
       </div>
 
-      {/* GO LIVE 버튼 또는 갱신 버튼 */}
-      {!isActive ? (
-        <button
-          onClick={() => setIsActive(true)}
-          className="mb-8 w-full py-5 bg-primary text-white font-black text-xl rounded-2xl shadow-xl shadow-primary/20 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3"
-        >
-          <Navigation size={22} />
-          GO LIVE — 실시간 정보 시작
-        </button>
-      ) : (
-        <button
-          onClick={fetchAll}
-          disabled={loading}
-          className="mb-8 w-full py-4 bg-black dark:bg-white text-white dark:text-black font-black rounded-2xl flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-95"
-        >
-          {loading ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
-          {loading ? '갱신 중...' : '실시간 정보 갱신'}
-        </button>
-      )}
+      {/* 컨트롤 버튼 */}
+      <div className="mb-12">
+        {!isActive ? (
+          <button
+            onClick={() => setIsActive(true)}
+            className="w-full py-5 premium-gradient text-white font-black text-lg rounded-[2rem] shadow-[0_20px_40px_-15px_rgba(170,59,255,0.4)] hover:shadow-[0_25px_50px_-12px_rgba(170,59,255,0.5)] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+          >
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+              <Navigation size={18} fill="currentColor" />
+            </div>
+            GO LIVE — 관제 시작
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={fetchAll}
+              disabled={loading}
+              className="flex-1 py-4 glass-card glass-card-hover rounded-2xl flex items-center justify-center gap-2 text-sm font-black disabled:opacity-40 transition-all uppercase tracking-widest"
+            >
+              {loading ? <RefreshCw size={16} className="animate-spin text-primary" /> : <RefreshCw size={16} className="text-primary" />}
+              Refresh
+            </button>
+            <button
+              onClick={() => setIsActive(false)}
+              className="px-6 py-4 glass-card hover:bg-danger/10 hover:text-danger rounded-2xl transition-all text-xs font-black uppercase tracking-widest"
+            >
+              Stop
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* 여정 타임라인 */}
       <div className="flex-1">
-        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-6">REAL-TIME JOURNEY</h3>
+        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-text-sub dark:text-text-sub-dark opacity-40 mb-8 pl-1">Real-time Timeline</h3>
         
         <div className="relative">
           {/* 출발점 */}
-          <div className="relative pb-8 pl-12">
-            <div className="absolute w-7 h-7 bg-primary rounded-full -left-[36px] top-0 shadow-lg shadow-primary/30 flex items-center justify-center">
-              <MapPin size={14} className="text-white" />
+          <div className="relative pb-10 pl-12">
+            <div className="absolute w-8 h-8 premium-gradient rounded-full -left-[38px] top-0 shadow-lg shadow-primary/30 flex items-center justify-center">
+              <MapPin size={16} className="text-white" />
             </div>
-            <div className="absolute w-px h-full bg-gradient-to-b from-primary to-primary/20 -left-[23px] top-7" />
-            <h4 className="font-bold text-lg pt-1">출발: {route.start_place || route.start_point?.nickname || route.start_point?.stationName || ''}</h4>
+            <div className="absolute w-0.5 h-full bg-gradient-to-b from-primary to-primary/10 -left-[24px] top-9" />
+            <h4 className="font-extrabold text-xl pt-0.5">Start: {route.start_place || route.start_point?.nickname || ''}</h4>
           </div>
 
           {/* 구간 세그먼트 */}
@@ -272,12 +331,14 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
           </div>
 
           {/* 도착점 */}
-          <div className="relative pl-12 pt-4">
-            <div className="absolute w-8 h-8 bg-green-500 rounded-full -left-[36px] top-3 shadow-lg shadow-green-500/20 flex items-center justify-center">
+          <div className="relative pl-12 pt-6">
+            <div className="absolute w-8 h-8 bg-success rounded-full -left-[38px] top-6 shadow-lg shadow-success/30 flex items-center justify-center">
               <CheckCircle2 size={18} className="text-white" />
             </div>
-            <h4 className="font-bold text-xl">도착: {route.end_place || route.end_point?.nickname || route.end_point?.stationName || ''}</h4>
-            <p className="text-xs text-gray-400 mt-1">총 {totalMins}분 여정 완료</p>
+            <h4 className="font-extrabold text-2xl pt-6">Goal: {route.end_place || route.end_point?.nickname || ''}</h4>
+            <p className="text-xs font-bold text-text-sub dark:text-text-sub-dark opacity-50 mt-2 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-success" /> Journey Completed
+            </p>
           </div>
         </div>
       </div>
