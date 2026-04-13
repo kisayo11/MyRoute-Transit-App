@@ -10,6 +10,11 @@ export default async function handler(req, res) {
   }
 
   const { url } = req.query;
+  // 캐시 무효화 헤더 강제 주입 (에러 응답도 캐시되지 않도록 최상단에 배치)
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
