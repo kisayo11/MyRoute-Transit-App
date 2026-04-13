@@ -147,21 +147,23 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
     env.VITE_PUBLIC_BUS_API_KEY
   ].filter(Boolean) as string[]
 
-  let lastError = '인증키가 설정되지 않았습니다.'
+  let lastError = '안정적인 엔진(ODsay)의 인증키가 설정되지 않았습니다. Vercel 설정을 확인해주세요.'
 
   // 1순위: ODsay API (통합 서비스 - 가장 안정적)
-  if (arsId && env.VITE_ODSAY_API_KEY) {
+  const odsayKey = env.VITE_ODSAY_API_KEY
+  if (odsayKey && (arsId || stId)) {
     try {
-      // 1. arsId로 ODsay 내부 stationID 찾기
-      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${arsId}&apiKey=${env.VITE_ODSAY_API_KEY}`
+      const query = arsId || stId
+      // 1. arsId 또는 stId로 ODsay 내부 stationID 찾기
+      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${query}&apiKey=${odsayKey}`
       const searchData = await proxyFetch(searchUrl, 8000) as any
       const stations = searchData.result?.station || []
-      // arsID가 정확히 일치하거나 이름이 포함된 정류장 찾기
-      const targetStation = stations.find((s: any) => s.arsID === arsId || s.stationName.includes(arsId))
+      
+      // 우선적으로 arsID 매칭, 없으면 ID 매칭
+      const targetStation = stations.find((s: any) => s.arsID === arsId) || stations[0]
 
       if (targetStation?.stationID) {
-        // 2. 실시간 정보 호출
-        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${env.VITE_ODSAY_API_KEY}`
+        const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${odsayKey}`
         const odsayData = await proxyFetch(arrivalUrl, 10000) as any
         
         if (odsayData.result?.real) {
@@ -173,11 +175,17 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
             adirection: item.nextStationName ? `${item.nextStationName} 방면` : ''
           }))
           return { ok: true, data: arrivals, error: null }
+        } else {
+          lastError = 'ODsay: 해당 정류소의 실시간 정보가 없습니다.'
         }
+      } else {
+        lastError = 'ODsay: 정류소 ID 매칭에 실패했습니다.'
       }
     } catch (err: any) {
-      lastError = `ODsay API 오류: ${err.message}`
+      lastError = `ODsay API 호출 실패: ${err.message}`
     }
+  } else if (!odsayKey) {
+    lastError = 'VITE_ODSAY_API_KEY 가 설정되지 않았습니다.'
   }
 
   // 2순위: 서울시 열린데이터 광장 (빠름, 서울 버스 전용)
