@@ -27,8 +27,11 @@ export default async function handler(req, res) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': (req.headers.referer as string) || 'https://my-route-transit-app.vercel.app/',
-        'Origin': (req.headers.origin as string) || 'https://my-route-transit-app.vercel.app/'
+        // ODsay Web 권한 인증을 통과하기 위해,
+        // 사용자가 어떤 Vercel 프리뷰 도메인(branch URL)으로 접속하든 
+        // 무조건 등록된 메인 도메인을 Referer로 위장하여 보냅니다.
+        'Referer': 'https://my-route-transit-app.vercel.app/',
+        'Origin': 'https://my-route-transit-app.vercel.app/'
       }
     });
 
