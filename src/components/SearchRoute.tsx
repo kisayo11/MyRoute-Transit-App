@@ -199,7 +199,7 @@ export default function SearchRoute({ session, onBack, onRequestAuth }: {
             </div>
 
             {/* STEP 2: 대중교통 노드 */}
-            <div className="glass-card rounded-[2.5rem] p-8 border-accent/10 relative">
+            <div className={`glass-card rounded-[2.5rem] p-8 border-accent/10 relative ${(startResults.length > 0 || endResults.length > 0) ? 'z-50' : 'z-10'}`}>
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2.5 bg-accent/20 text-accent rounded-2xl">
                   <TrainFront size={20} strokeWidth={3} />

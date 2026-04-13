@@ -132,8 +132,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
 }
 // ===================== 버스 API (하이브리드 엔진) =====================
 // 서울시 전용 망과 국가 공공데이터 망을 지능적으로 스위칭합니다.
-
-export async function getRealtimeBus(arsId: string, stId: string): Promise<RealtimeResult<BusArrival>> {
+export async function getRealtimeBus(arsId: string, stId: string, stationName?: string): Promise<RealtimeResult<BusArrival>> {
   // 사용 가능한 모든 키를 수집합니다.
   const env = import.meta.env
   const seoulKeys = [
@@ -151,16 +150,18 @@ export async function getRealtimeBus(arsId: string, stId: string): Promise<Realt
 
   // 1순위: ODsay API (통합 서비스 - 가장 안정적)
   const odsayKey = env.VITE_ODSAY_API_KEY
-  if (odsayKey && (arsId || stId)) {
+  if (odsayKey && (arsId || stId || stationName)) {
     try {
-      const query = arsId || stId
-      // 1. arsId 또는 stId로 ODsay 내부 stationID 찾기
-      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${query}&apiKey=${odsayKey}`
+      const query = arsId || stId || stationName
+      // 1. arsId 또는 이름으로 ODsay 내부 stationID 찾기
+      const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${encodeURIComponent(query || '')}&apiKey=${odsayKey}`
       const searchData = await proxyFetch(searchUrl, 8000) as any
       const stations = searchData.result?.station || []
       
-      // 우선적으로 arsID 매칭, 없으면 ID 매칭
-      const targetStation = stations.find((s: any) => s.arsID === arsId) || stations[0]
+      // 우선적으로 arsID 매칭, 없으면 이름 매칭, 최후에 첫번째 결과
+      const targetStation = stations.find((s: any) => s.arsID === arsId) || 
+                            stations.find((s: any) => stationName && s.stationName.includes(stationName)) ||
+                            stations[0]
 
       if (targetStation?.stationID) {
         const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${odsayKey}`

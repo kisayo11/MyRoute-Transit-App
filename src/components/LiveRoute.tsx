@@ -29,7 +29,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
         if (arsId || stId) {
           const mainId = arsId || stId
           const key = `bus_${mainId}`
-          results[key] = await getRealtimeBus(arsId, stId)
+          results[key] = await getRealtimeBus(arsId, stId, path.startName)
         }
       }
     }
