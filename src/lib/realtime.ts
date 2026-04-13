@@ -155,7 +155,8 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
       const query = arsId || stId || stationName
       // 1. arsId 또는 이름으로 ODsay 내부 stationID 찾기
       const searchUrl = `https://api.odsay.com/v1/api/searchStation?lang=0&stationName=${encodeURIComponent(query || '')}&apiKey=${odsayKey}`
-      const searchData = await proxyFetch(searchUrl, 8000) as any
+      const searchRes = await fetch(searchUrl)
+      const searchData = await searchRes.json()
       const stations = searchData.result?.station || []
       
       // 우선적으로 arsID 매칭, 없으면 이름 매칭, 최후에 첫번째 결과
@@ -165,7 +166,8 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
 
       if (targetStation?.stationID) {
         const arrivalUrl = `https://api.odsay.com/v1/api/getBusArrivalInfo?lang=0&stationID=${targetStation.stationID}&apiKey=${odsayKey}`
-        const odsayData = await proxyFetch(arrivalUrl, 10000) as any
+        const arrivalRes = await fetch(arrivalUrl)
+        const odsayData = await arrivalRes.json()
         
         if (odsayData.result?.real) {
           const arrivals: BusArrival[] = odsayData.result.real.map((item: any) => ({
