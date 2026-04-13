@@ -132,7 +132,7 @@ export async function getRealtimeSubway(stationName: string): Promise<RealtimeRe
 }
 // ===================== 버스 API (하이브리드 엔진) =====================
 // 서울시 전용 망과 국가 공공데이터 망을 지능적으로 스위칭합니다.
-export async function getRealtimeBus(arsId: string, stId: string, stationName?: string): Promise<RealtimeResult<BusArrival>> {
+export async function getRealtimeBus(arsId: string, stId: string, stationName?: string, odsayStationId?: string): Promise<RealtimeResult<BusArrival>> {
   // 사용 가능한 모든 키를 수집합니다.
   const env = import.meta.env
   const seoulKeys = [
