@@ -46,6 +46,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
   const [loading, setLoading] = useState(false)
   const [realtimeData, setRealtimeData] = useState<Record<string, any>>({})
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({})
 
   const subPaths = useMemo(() => (route.path_info as any)?.subPath || [], [route.path_info])
   const totalMins = useMemo(() => (route.path_info as any)?.info?.totalTime ?? 0, [route.path_info])
@@ -92,19 +93,24 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
   }, [lastUpdated]);
 
   const renderSegment = (path: any, idx: number) => {
-    // 누적 소요 시간 계산 로직 (나의 정류장 도착 예상 시간)
+    const isCompleted = !!completedSteps[idx];
+    const currentActiveIdx = (subPaths as any[]).findIndex((_, i) => !completedSteps[i]);
+    const safeActiveIdx = currentActiveIdx === -1 ? subPaths.length : currentActiveIdx;
+
     let accumulatedTime = 0;
-    for (let i = 0; i < idx; i++) {
-      accumulatedTime += (subPaths[i] as any).sectionTime || 0;
+    if (idx >= safeActiveIdx) {
+      for (let i = safeActiveIdx; i < idx; i++) {
+        accumulatedTime += (subPaths[i] as any).sectionTime || 0;
+      }
     }
 
     // 도보
     if (path.trafficType === 3) {
       if (!path.sectionTime || path.sectionTime === 0) return null
       return (
-        <div key={idx} className="flex items-center gap-2 py-2 pl-12 text-xs font-semibold text-gray-400">
+        <div key={idx} className={`flex items-center gap-2 py-2 pl-12 text-xs font-semibold ${isCompleted ? 'opacity-30' : 'text-gray-400'}`}>
           <div className="absolute -left-[21px] w-2 h-2 bg-gray-300 rounded-full" />
-          🚶 도보 {path.sectionTime}분 이동
+          🚶 도보 {path.sectionTime}분 이동 {isCompleted && '(완료)'}
         </div>
       )
     }
@@ -117,16 +123,28 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
       const lineName = path.lane?.[0]?.name?.replace('수도권 ', '') || '지하철'
 
       return (
-        <div key={idx} className="relative pb-8 pl-12">
-          <div className="absolute w-4 h-4 bg-white dark:bg-[#16171d] border-4 border-purple-500 rounded-full -left-[32px] top-1 z-10" />
+        <div key={idx} className={`relative pb-8 pl-12 ${isCompleted ? 'opacity-30' : ''}`}>
+          <div className={`absolute w-4 h-4 bg-white dark:bg-[#16171d] border-4 ${isCompleted ? 'border-gray-400' : 'border-purple-500'} rounded-full -left-[32px] top-1 z-10`} />
           <div className="absolute w-px h-full bg-purple-200 dark:bg-purple-900/40 -left-[25px] top-4" />
 
-          <div className="flex items-center gap-2 mb-1">
-            <TrainFront size={18} className="text-purple-500" />
-            <h4 className="font-bold text-lg text-purple-600 dark:text-purple-400">
-              {path.startName} 탑승
-              {isActive && <span className="text-sm text-purple-600/50 dark:text-purple-400/50 font-medium ml-2">예상 {formatETA(accumulatedTime)}</span>}
-            </h4>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <TrainFront size={18} className={isCompleted ? "text-gray-400" : "text-purple-500"} />
+              <h4 className={`font-bold text-lg ${isCompleted ? "text-gray-400" : "text-purple-600 dark:text-purple-400"}`}>
+                {path.startName} 탑승
+                {isActive && <span className="text-sm text-purple-600/50 dark:text-purple-400/50 font-medium ml-2">예상 {formatETA(accumulatedTime)}</span>}
+              </h4>
+            </div>
+            
+            {isActive && (
+              <button 
+                onClick={() => setCompletedSteps(p => ({...p, [idx]: !p[idx]}))}
+                className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${isCompleted ? 'bg-success text-white border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success'}`}
+              >
+                {isCompleted && <CheckCircle2 size={12} />}
+                {isCompleted ? '완료됨' : '도착 (체크)'}
+              </button>
+            )}
           </div>
 
           <div className="flex gap-2 mb-3">
@@ -185,7 +203,8 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
               });
 
               const displayedSubways = filtered.slice(0, 2);
-              const isAllMissed = displayedSubways.length > 0 && displayedSubways.every((a: SubwayArrival) => parseEstimatedMinutes(a.arvlMsg2) < accumulatedTime);
+              const validSubways = displayedSubways.filter((a: SubwayArrival) => parseEstimatedMinutes(a.arvlMsg2) >= accumulatedTime);
+              const isAllMissed = displayedSubways.length > 0 && validSubways.length === 0;
               const interval = path.subwayInterval || null;
 
               return (
@@ -193,25 +212,32 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                   {filtered.length === 0 ? (
                     <p className="text-xs text-gray-400">현재 해당 방향 도착 예정 열차 없음 (필터 차단됨)</p>
                   ) : (
-                    displayedSubways.map((a: SubwayArrival, i: number) => {
+                    validSubways.map((a: SubwayArrival, i: number) => {
                       const eta = parseEstimatedMinutes(a.arvlMsg2);
-                      const isMissed = eta < accumulatedTime;
+                      const diff = eta - accumulatedTime;
+                      
+                      let statusEl = null;
+                      if (diff <= 2) {
+                        statusEl = <span className="text-[12px] text-danger font-black bg-danger/10 px-2 py-0.5 rounded-md">⚡ 서두르세요 ({diff}분 여유)</span>;
+                      } else {
+                        statusEl = <span className="text-[12px] text-success font-bold">도착 후 {diff}분 대기</span>;
+                      }
 
                       return (
-                        <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30' : ''} ${isMissed ? 'opacity-40 grayscale' : ''}`}>
-                          <div className="flex flex-col">
-                            <span className={`text-xs ${isMissed ? 'line-through text-gray-400' : 'text-gray-500'} truncate pr-2`}>{a.trainLineNm}</span>
-                            {isMissed && <span className="text-[10px] text-danger font-bold mt-0.5">도착 전 출발 (놓침)</span>}
-                            {!isMissed && accumulatedTime > 0 && <span className="text-[10px] text-success font-bold mt-0.5">정류장 도착 후 약 {eta - accumulatedTime}분 대기</span>}
+                        <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30' : ''}`}>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-bold">{a.trainLineNm}</span>
+                            {accumulatedTime >= 0 && statusEl}
                           </div>
-                          <span className={`text-sm font-bold ${isMissed ? 'text-gray-400 line-through' : 'text-purple-600 dark:text-purple-400'} whitespace-nowrap`}>{a.arvlMsg2}</span>
+                          <span className="text-lg font-black text-purple-600 dark:text-purple-400 whitespace-nowrap">{a.arvlMsg2}</span>
                         </div>
                       );
                     })
                   )}
                   {isAllMissed && interval && (
-                    <div className="mt-3 p-2 bg-red-500/10 rounded-lg text-center">
-                      <p className="text-[11px] font-bold text-danger">제공된 실시간 차량은 탑승이 불가하며,<br/>다음 정규 배차(약 {interval}분)를 기다려야 합니다.</p>
+                    <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-500">실시간 차량은 이미 통과.</span>
+                      <span className="text-xs font-bold text-danger">다음 차 약 {interval}분 뒤 대기</span>
                     </div>
                   )}
                 </>
@@ -229,33 +255,37 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
       const result = realtimeData[key]
       const busNo = path.lane?.[0]?.busNo || '버스'
       const allBuses = result?.ok ? result.data : []
-      
-      // 내 버스를 가장 위에 오게 정렬
-      const sortedBuses = [...allBuses].sort((a: BusArrival, b: BusArrival) => {
-        if (a.rtNm === busNo) return -1;
-        if (b.rtNm === busNo) return 1;
-        return 0;
-      })
+      const targetBuses = [...allBuses].filter((a: BusArrival) => a.rtNm === busNo)
       
       const interval = path.busInterval || (result?.ok && result.data[0]?.interval ? result.data[0].interval : null)
       const isCentral = path.busOnlyCentralLane === 1
       const lastBus = path.busLastTime
 
       return (
-        <div key={idx} className="relative pb-10 pl-12">
-          <div className="absolute w-4 h-4 bg-white dark:bg-background-dark border-4 border-success rounded-full -left-[32px] top-1 z-10" />
+        <div key={idx} className={`relative pb-10 pl-12 ${isCompleted ? 'opacity-30' : ''}`}>
+          <div className={`absolute w-4 h-4 bg-white dark:bg-background-dark border-4 ${isCompleted ? 'border-gray-400' : 'border-success'} rounded-full -left-[32px] top-1 z-10`} />
           <div className="absolute w-px h-full bg-success/20 -left-[25px] top-4" />
 
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-success/10 rounded-xl">
-                <Bus size={18} className="text-success" />
+              <div className={`p-2 rounded-xl ${isCompleted ? 'bg-gray-200' : 'bg-success/10'}`}>
+                <Bus size={18} className={isCompleted ? 'text-gray-400' : 'text-success'} />
               </div>
-              <h4 className="font-extrabold text-xl text-text-main dark:text-text-main-dark">
+              <h4 className={`font-extrabold text-xl ${isCompleted ? 'text-gray-400' : 'text-text-main dark:text-text-main-dark'}`}>
                 {path.startName}
                 {isActive && <span className="text-sm font-medium ml-2 text-gray-400">예상 {formatETA(accumulatedTime)}</span>}
               </h4>
             </div>
+            
+            {isActive && (
+              <button 
+                onClick={() => setCompletedSteps(p => ({...p, [idx]: !p[idx]}))}
+                className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${isCompleted ? 'bg-success text-white border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success'}`}
+              >
+                {isCompleted && <CheckCircle2 size={12} />}
+                {isCompleted ? '완료됨' : '도착 (체크)'}
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
@@ -279,60 +309,60 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                 <div className="flex items-center justify-center gap-2 text-xs font-bold text-text-sub py-4"><RefreshCw size={12} className="animate-spin" /> 버스 위치 탐색 중...</div>
               ) : !result.ok ? (
                 <div className="flex items-center justify-center gap-2 text-xs font-bold text-danger py-4"><AlertCircle size={12} /> {result.error}</div>
-              ) : sortedBuses.length === 0 ? (
+              ) : targetBuses.length === 0 ? (
                 <p className="text-xs text-text-sub font-bold text-center py-4">도착 예정인 버스가 없습니다</p>
               ) : (
-                sortedBuses.map((a: BusArrival, i: number) => {
+                targetBuses.map((a: BusArrival, i: number) => {
                   const arr1 = parseArrival(a.arrmsg1);
                   const arr2 = parseArrival(a.arrmsg2);
                   const badge = getBusBadge(a.routeType || '');
-                  const isMyBus = a.rtNm === busNo;
 
                   const eta1 = parseEstimatedMinutes(a.arrmsg1);
                   const eta2 = parseEstimatedMinutes(a.arrmsg2);
-                  const isMissed1 = eta1 < accumulatedTime;
-                  const isMissed2 = a.arrmsg2 ? eta2 < accumulatedTime : true;
-                  const isBothMissed = isMyBus && isMissed1 && isMissed2;
+                  
+                  const validBuses = [
+                    { ...arr1, eta: eta1 },
+                    { ...arr2, eta: eta2 }
+                  ].filter(b => b.time && !b.time.includes('정보') && b.eta >= accumulatedTime);
+
+                  const isAllMissed = validBuses.length === 0;
 
                   return (
-                    <div key={i} className={`flex flex-col pb-4 ${i !== sortedBuses.length - 1 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className={`flex items-center gap-2 ${isBothMissed ? 'opacity-40 grayscale' : ''}`}>
+                    <div key={i} className={`flex flex-col pb-4 ${i !== targetBuses.length - 1 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
                           <span className={`px-1.5 py-0.5 text-[10px] font-bold text-white rounded-sm ${badge.bg}`}>{badge.text}</span>
-                          <span className={`font-black text-lg ${isMyBus ? 'text-primary' : 'text-text-main dark:text-white'}`}>{a.rtNm}</span>
+                          <span className="font-black text-2xl text-primary">{a.rtNm}</span>
                           <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">· {a.adirection} 방면</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 text-[13px] ml-1 flex-wrap">
-                        {/* 첫번째 버스 */}
-                        <div className={`flex flex-col ${isMissed1 ? 'opacity-40 grayscale' : ''}`}>
-                          <div className="flex items-center gap-1.5">
-                            <span className={`font-black ${arr1.time.includes('분') || arr1.time.includes('잠시') || arr1.time.includes('도착') ? (isMissed1 ? 'text-gray-500 line-through' : 'text-danger') : 'text-gray-500'}`}>{arr1.time}</span>
-                            {arr1.desc && <span className={`font-medium ${isMissed1 ? 'text-gray-400 line-through' : 'text-gray-400'}`}>{arr1.desc}</span>}
-                          </div>
-                          {isMyBus && !isMissed1 && accumulatedTime > 0 && <span className="text-[10px] text-success font-bold">약 {eta1 - accumulatedTime}분 대기</span>}
-                          {isMyBus && isMissed1 && <span className="text-[10px] text-danger font-bold">놓침 예상</span>}
+                      {isAllMissed ? (
+                        <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-500">현재 차량은 탑승 불가</span>
+                          <span className="text-sm font-black text-danger">다음 차 (약 {interval || '?'}분) 대기</span>
                         </div>
-                        
-                        {/* 두번째 버스가 있으면 표시 */}
-                        {a.arrmsg2 && arr2.time && !arr2.time.includes('정보') && (
-                          <>
-                            <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
-                            <div className={`flex flex-col ${isMissed2 ? 'opacity-40 grayscale' : ''}`}>
-                              <div className="flex items-center gap-1.5 opacity-70">
-                                <span className={`font-bold ${arr2.time.includes('분') || arr2.time.includes('잠시') ? (isMissed2 ? 'text-gray-500 line-through' : 'text-danger') : 'text-gray-500'}`}>{arr2.time}</span>
-                                {arr2.desc && <span className={`text-[12px] font-medium ${isMissed2 ? 'text-gray-400 line-through' : 'text-gray-400'}`}>{arr2.desc}</span>}
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          {validBuses.map((b, bIdx) => {
+                            const diff = b.eta - accumulatedTime;
+                            let statusEl = null;
+                            if (diff <= 2) {
+                              statusEl = <span className="text-[12px] text-danger font-black bg-danger/10 px-2 py-0.5 rounded-md">⚡ 서두르세요 ({diff}분 여유)</span>;
+                            } else {
+                              statusEl = <span className="text-[12px] text-success font-bold">도착 후 {diff}분 대기</span>;
+                            }
+
+                            return (
+                              <div key={bIdx} className="flex items-center justify-between bg-gray-50 dark:bg-[#1f2029] p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+                                <div className="flex flex-col gap-1">
+                                  {accumulatedTime >= 0 && statusEl}
+                                  <span className="text-xs text-gray-500 font-medium">{b.desc}</span>
+                                </div>
+                                <span className={`text-2xl font-black ${diff <= 2 ? 'text-danger' : 'text-text-main dark:text-white'}`}>{b.time}</span>
                               </div>
-                              {isMyBus && !isMissed2 && accumulatedTime > 0 && <span className="text-[10px] text-success font-bold">약 {eta2 - accumulatedTime}분 대기</span>}
-                              {isMyBus && isMissed2 && <span className="text-[10px] text-danger font-bold">놓침 예상</span>}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      {isBothMissed && interval && (
-                        <div className="mt-3 p-2 bg-red-500/10 rounded-lg text-center">
-                          <p className="text-[11px] font-bold text-danger">제공된 차량 탑승 불가, 다음 정규 배차(약 {interval}분) 대기 필요</p>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
