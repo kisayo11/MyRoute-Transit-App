@@ -99,7 +99,14 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
   }, [lastUpdated]);
 
   const handleCheck = (idx: number) => {
-    setCompletedSteps(p => ({...p, [idx]: !p[idx]}))
+    setCompletedSteps(p => {
+      const next = { ...p };
+      // 사용자가 idx(예: 환승역)의 체크 버튼을 눌렀다는 건, 그 앞의 모든 과정(도보, 이전 탑승)이 끝났음을 의미함
+      for (let i = 0; i < idx; i++) {
+        next[i] = true;
+      }
+      return next;
+    })
     fetchAll() // 클릭 즉시 실시간 데이터 갱신
   }
 
@@ -112,6 +119,12 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
     if (idx >= safeActiveIdx) {
       for (let i = safeActiveIdx; i < idx; i++) {
         accumulatedTime += (subPaths[i] as any).sectionTime || 0;
+        
+        // i가 탑승수단(지하철, 버스)인 경우, 이를 타기 위한 평균 대기시간을 타임 플로우에 합산해야 현실적인 시간이 나옴
+        if ((subPaths[i] as any).trafficType !== 3) {
+           const interval = (subPaths[i] as any).subwayInterval || 8; // API 미제공시 기본 8분 배차 가정
+           accumulatedTime += Math.floor(interval / 2);
+        }
       }
     }
 
