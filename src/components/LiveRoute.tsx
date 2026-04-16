@@ -98,6 +98,11 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
     return eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   }, [lastUpdated]);
 
+  const handleCheck = (idx: number) => {
+    setCompletedSteps(p => ({...p, [idx]: !p[idx]}))
+    fetchAll() // 클릭 즉시 실시간 데이터 갱신
+  }
+
   const renderSegment = (path: any, idx: number) => {
     const isCompleted = !!completedSteps[idx];
     const currentActiveIdx = (subPaths as any[]).findIndex((_, i) => !completedSteps[i]);
@@ -144,7 +149,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
             
             {isActive && (
               <button 
-                onClick={() => setCompletedSteps(p => ({...p, [idx]: !p[idx]}))}
+                onClick={() => handleCheck(idx)}
                 className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${isCompleted ? 'bg-success text-white border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success'}`}
               >
                 {isCompleted && <CheckCircle2 size={12} />}
@@ -208,7 +213,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                 return false;
               });
 
-              const displayedSubways = filtered.slice(0, 2);
+              const displayedSubways = filtered.slice(0, 4); // 제공되는 데이터 최대한 표출
               const interval = path.subwayInterval || null;
 
               return (
@@ -283,7 +288,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
             
             {isActive && (
               <button 
-                onClick={() => setCompletedSteps(p => ({...p, [idx]: !p[idx]}))}
+                onClick={() => handleCheck(idx)}
                 className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${isCompleted ? 'bg-success text-white border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success'}`}
               >
                 {isCompleted && <CheckCircle2 size={12} />}
