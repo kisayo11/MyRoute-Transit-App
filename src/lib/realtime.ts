@@ -176,8 +176,9 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
             rtNm: item.routeNm || '',
             arrmsg1: item.arrivalMsg || '정보 없음',
             arrmsg2: '',
-            stNm: targetStation.stationName || '',
-            adirection: item.nextStationName ? `${item.nextStationName} 방면` : ''
+            stNm: targetStation?.stationName || '',
+            adirection: item.nextStationName ? `${item.nextStationName} 방면` : '',
+            routeType: String(item.routeType || '')
           }))
           return { ok: true, data: arrivals, error: null }
         } else {
@@ -207,7 +208,8 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
             arrmsg1: item.arrmsg1 || '정보 없음',
             arrmsg2: item.arrmsg2 || '',
             stNm: item.stNm || '',
-            adirection: item.adirection || ''
+            adirection: item.adirection || '',
+            routeType: item.routeType || ''
           }))
           return { ok: true, data: arrivals, error: null }
         }
@@ -233,9 +235,10 @@ export async function getRealtimeBus(arsId: string, stId: string, stationName?: 
             const arrivals: BusArrival[] = itemList.map((item: any) => ({
               rtNm: item.rtNm || '',
               arrmsg1: item.arrmsg1 || '정보 없음',
-              arrmsg2: item.arrmsg1 || '',
+              arrmsg2: item.arrmsg2 || '',
               stNm: item.stNm || '',
-              adirection: item.adirection || ''
+              adirection: item.adirection || '',
+              routeType: item.routeType || ''
             }))
             return { ok: true, data: arrivals, error: null }
           }

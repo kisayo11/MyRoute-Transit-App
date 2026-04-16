@@ -3,6 +3,32 @@ import { ArrowLeft, Navigation, MapPin, Loader2, TrainFront, CheckCircle2, Chevr
 import { getRealtimeSubway, getRealtimeBus } from '../lib/realtime'
 import { type SubwayArrival, type BusArrival } from '../types'
 
+const parseArrival = (msg: string) => {
+  if (!msg || msg === '정보 없음' || msg === '운행종료') return { time: msg, desc: '' };
+  const match = msg.match(/([\w\d\s분초]+)후\[(.*?)\]/);
+  if (match) {
+    let timeStr = match[1].trim().replace(/(\d+분)\s*\d+초/, '$1'); // "2분57초" -> "2분"
+    const leftStop = match[2].trim().replace('번째 전', '정류장');
+    return { time: timeStr, desc: leftStop };
+  }
+  return { time: msg.replace('[', ' ').replace(']', ''), desc: '' };
+}
+
+const getBusBadge = (type: string) => {
+  switch (String(type)) {
+    case '1': return { bg: 'bg-sky-500', text: '공항', isRed: false };
+    case '2': return { bg: 'bg-lime-500', text: '마을', isRed: false };
+    case '3': return { bg: 'bg-blue-600', text: '간선', isRed: false };
+    case '4': return { bg: 'bg-green-500', text: '지선', isRed: false };
+    case '5': return { bg: 'bg-yellow-500', text: '순환', isRed: false };
+    case '6': return { bg: 'bg-red-500', text: '광역', isRed: true };
+    case '7': return { bg: 'bg-red-600', text: '인천', isRed: true };
+    case '8': return { bg: 'bg-emerald-600', text: '경기', isRed: false };
+    case '9': return { bg: 'bg-gray-700', text: '폐지', isRed: false };
+    default: return { bg: 'bg-gray-400 text-white border-transparent', text: '일반', isRed: false };
+  }
+}
+
 export default function LiveRoute({ route, onBack }: { route: Route, onBack: () => void }) {
   const [isActive, setIsActive] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -157,10 +183,16 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
       const key = `bus_${stId}`
       const result = realtimeData[key]
       const busNo = path.lane?.[0]?.busNo || '버스'
-      const myBus = result?.ok ? result.data.filter((a: BusArrival) => a.rtNm === busNo) : []
+      const allBuses = result?.ok ? result.data : []
       
-      // 배차 및 정보 센스 있게 가공
-      const interval = path.busInterval || (result?.ok ? result.data[0]?.interval : null)
+      // 내 버스를 가장 위에 오게 정렬
+      const sortedBuses = [...allBuses].sort((a: BusArrival, b: BusArrival) => {
+        if (a.rtNm === busNo) return -1;
+        if (b.rtNm === busNo) return 1;
+        return 0;
+      })
+      
+      const interval = path.busInterval || (result?.ok && result.data[0]?.interval ? result.data[0].interval : null)
       const isCentral = path.busOnlyCentralLane === 1
       const lastBus = path.busLastTime
 
@@ -179,7 +211,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
           </div>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
-            <span className="px-2.5 py-1 text-[11px] font-black premium-gradient text-white rounded-lg shadow-sm">{busNo}번</span>
+            <span className="px-2.5 py-1 text-[11px] font-black premium-gradient text-white rounded-lg shadow-sm">Target: {busNo}번</span>
             {isCentral && (
               <span className="px-2 py-1 text-[10px] font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg">중앙차로</span>
             )}
@@ -191,28 +223,54 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
             )}
           </div>
 
-          <div className="glass-card rounded-2xl p-4 relative overflow-hidden">
-            {!isActive ? (
-              <p className="text-xs text-text-sub font-bold">GO LIVE를 누르면 실시간 위치를 추적합니다</p>
-            ) : !result ? (
-              <div className="flex items-center gap-2 text-xs font-bold text-text-sub animate-pulse"><RefreshCw size={12} className="animate-spin" /> 버스 위치 탐색 중...</div>
-            ) : !result.ok ? (
-              <div className="flex items-center gap-2 text-xs font-bold text-danger"><AlertCircle size={12} /> {result.error}</div>
-            ) : myBus.length === 0 ? (
-              <p className="text-xs text-text-sub font-bold">현재 운행 중인 {busNo}번 버스가 없습니다</p>
-            ) : (
-              myBus.slice(0, 2).map((a: BusArrival, i: number) => (
-                <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-3 pt-3 border-t border-white/5' : ''}`}>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-text-sub dark:text-text-sub-dark opacity-40 mb-0.5">Destination</span>
-                    <span className="text-xs font-black text-text-sub dark:text-text-sub-dark">{a.adirection} 방향</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-sm font-black ${a.arrmsg1.includes('전') ? 'text-danger' : 'text-success'}`}>{a.arrmsg1}</span>
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="glass-card rounded-2xl relative overflow-hidden bg-white dark:bg-[#16171d]">
+            <div className="max-h-[400px] overflow-y-auto p-4 space-y-4 relative z-10 custom-scrollbar">
+              {!isActive ? (
+                <p className="text-xs text-text-sub font-bold text-center py-4">GO LIVE를 누르면 실시간 위치를 추적합니다</p>
+              ) : !result ? (
+                <div className="flex items-center justify-center gap-2 text-xs font-bold text-text-sub py-4"><RefreshCw size={12} className="animate-spin" /> 버스 위치 탐색 중...</div>
+              ) : !result.ok ? (
+                <div className="flex items-center justify-center gap-2 text-xs font-bold text-danger py-4"><AlertCircle size={12} /> {result.error}</div>
+              ) : sortedBuses.length === 0 ? (
+                <p className="text-xs text-text-sub font-bold text-center py-4">도착 예정인 버스가 없습니다</p>
+              ) : (
+                sortedBuses.map((a: BusArrival, i: number) => {
+                  const arr1 = parseArrival(a.arrmsg1);
+                  const arr2 = parseArrival(a.arrmsg2);
+                  const badge = getBusBadge(a.routeType || '');
+                  const isMyBus = a.rtNm === busNo;
+
+                  return (
+                    <div key={i} className={`flex flex-col pb-4 ${i !== sortedBuses.length - 1 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className={`px-1.5 py-0.5 text-[10px] font-bold text-white rounded-sm ${badge.bg}`}>{badge.text}</span>
+                        <span className={`font-black text-lg ${isMyBus ? 'text-primary' : 'text-text-main dark:text-white'}`}>{a.rtNm}</span>
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate flex-1">· {a.adirection} 방면</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-[13px] ml-1 flex-wrap">
+                        {/* 첫번째 버스 */}
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-black ${arr1.time.includes('분') || arr1.time.includes('잠시') || arr1.time.includes('도착') ? 'text-red-500' : 'text-gray-500'}`}>{arr1.time}</span>
+                          {arr1.desc && <span className="text-gray-400 font-medium">{arr1.desc}</span>}
+                        </div>
+                        
+                        {/* 두번째 버스가 있으면 표시 */}
+                        {a.arrmsg2 && arr2.time && !arr2.time.includes('정보') && (
+                          <>
+                            <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
+                            <div className="flex items-center gap-1.5 opacity-70">
+                              <span className={`font-bold ${arr2.time.includes('분') || arr2.time.includes('잠시') ? 'text-red-500' : 'text-gray-500'}`}>{arr2.time}</span>
+                              {arr2.desc && <span className="text-gray-400 text-[12px] font-medium">{arr2.desc}</span>}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
             {/* 배경 패턴 (프리미엄 감성) */}
             <div className="absolute top-0 right-0 p-1 opacity-[0.03] pointer-events-none">
               <Bus size={60} strokeWidth={1} />

@@ -18,6 +18,7 @@ export interface BusArrival {
   arrmsg2: string      // "15분 후 [5번째 전]"
   stNm: string         // 정류소명
   adirection: string   // 진행방향
+  routeType?: string   // 노선유형 (1: 공항, 2: 마을, 3: 간선, 4: 지선, 5: 순환, 6: 광역, 7: 인천, 8: 경기, 9: 폐지, 0: 공용)
 }
 
 export interface Route {
