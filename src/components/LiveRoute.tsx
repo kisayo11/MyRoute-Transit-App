@@ -11,7 +11,27 @@ const parseArrival = (msg: string) => {
     const leftStop = match[2].trim().replace('번째 전', '정류장');
     return { time: timeStr, desc: leftStop };
   }
+const parseArrival = (msg: string) => {
+  if (!msg || msg === '정보 없음' || msg === '운행종료') return { time: msg, desc: '' };
+  const match = msg.match(/([\w\d\s분초]+)후\[(.*?)\]/);
+  if (match) {
+    let timeStr = match[1].trim().replace(/(\d+분)\s*\d+초/, '$1'); // "2분57초" -> "2분"
+    const leftStop = match[2].trim().replace('번째 전', '정류장');
+    return { time: timeStr, desc: leftStop };
+  }
   return { time: msg.replace('[', ' ').replace(']', ''), desc: '' };
+}
+
+const parseEstimatedMinutes = (msg: string) => {
+  if (!msg) return 999;
+  if (msg.includes('곧 도착') || msg.includes('잠시') || msg.includes('전역') || msg.includes('1번째 전')) return 1;
+  const match = msg.match(/(\d+)분/);
+  if (match) return parseInt(match[1], 10);
+  if (msg.includes('번째 전')) {
+    const sMatch = msg.match(/(\d+)번째 전/);
+    if (sMatch) return parseInt(sMatch[1], 10) * 2; // 러프하게 1정거장당 2분
+  }
+  return 999;
 }
 
 const getBusBadge = (type: string) => {
@@ -74,6 +94,12 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
   }, [isActive, fetchAll])
 
   const renderSegment = (path: any, idx: number) => {
+    // 누적 소요 시간 계산 로직 (나의 정류장 도착 예상 시간)
+    let accumulatedTime = 0;
+    for (let i = 0; i < idx; i++) {
+      accumulatedTime += (subPaths[i] as any).sectionTime || 0;
+    }
+
     // 도보
     if (path.trafficType === 3) {
       if (!path.sectionTime || path.sectionTime === 0) return null
@@ -157,17 +183,35 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                 return false;
               });
 
+              const displayedSubways = filtered.slice(0, 2);
+              const isAllMissed = displayedSubways.length > 0 && displayedSubways.every((a: SubwayArrival) => parseEstimatedMinutes(a.arvlMsg2) < accumulatedTime);
+              const interval = path.subwayInterval || null;
+
               return (
                 <>
                   {filtered.length === 0 ? (
                     <p className="text-xs text-gray-400">현재 해당 방향 도착 예정 열차 없음 (필터 차단됨)</p>
                   ) : (
-                    filtered.slice(0, 2).map((a: SubwayArrival, i: number) => (
-                      <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-2 pt-2 border-t border-purple-100 dark:border-purple-900/30' : ''}`}>
-                        <span className="text-xs text-gray-500 truncate pr-2">{a.trainLineNm}</span>
-                        <span className="text-sm font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">{a.arvlMsg2}</span>
-                      </div>
-                    ))
+                    displayedSubways.map((a: SubwayArrival, i: number) => {
+                      const eta = parseEstimatedMinutes(a.arvlMsg2);
+                      const isMissed = eta < accumulatedTime;
+
+                      return (
+                        <div key={i} className={`flex justify-between items-center ${i > 0 ? 'mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/30' : ''} ${isMissed ? 'opacity-40 grayscale' : ''}`}>
+                          <div className="flex flex-col">
+                            <span className={`text-xs ${isMissed ? 'line-through text-gray-400' : 'text-gray-500'} truncate pr-2`}>{a.trainLineNm}</span>
+                            {isMissed && <span className="text-[10px] text-danger font-bold mt-0.5">도착 전 출발 (놓침)</span>}
+                            {!isMissed && accumulatedTime > 0 && <span className="text-[10px] text-success font-bold mt-0.5">정류장 도착 후 약 {eta - accumulatedTime}분 대기</span>}
+                          </div>
+                          <span className={`text-sm font-bold ${isMissed ? 'text-gray-400 line-through' : 'text-purple-600 dark:text-purple-400'} whitespace-nowrap`}>{a.arvlMsg2}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                  {isAllMissed && interval && (
+                    <div className="mt-3 p-2 bg-red-500/10 rounded-lg text-center">
+                      <p className="text-[11px] font-bold text-danger">제공된 실시간 차량은 탑승이 불가하며,<br/>다음 정규 배차(약 {interval}분)를 기다려야 합니다.</p>
+                    </div>
                   )}
                 </>
               );
@@ -240,32 +284,53 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                   const badge = getBusBadge(a.routeType || '');
                   const isMyBus = a.rtNm === busNo;
 
+                  const eta1 = parseEstimatedMinutes(a.arrmsg1);
+                  const eta2 = parseEstimatedMinutes(a.arrmsg2);
+                  const isMissed1 = eta1 < accumulatedTime;
+                  const isMissed2 = a.arrmsg2 ? eta2 < accumulatedTime : true;
+                  const isBothMissed = isMyBus && isMissed1 && isMissed2;
+
                   return (
                     <div key={i} className={`flex flex-col pb-4 ${i !== sortedBuses.length - 1 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`px-1.5 py-0.5 text-[10px] font-bold text-white rounded-sm ${badge.bg}`}>{badge.text}</span>
-                        <span className={`font-black text-lg ${isMyBus ? 'text-primary' : 'text-text-main dark:text-white'}`}>{a.rtNm}</span>
-                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate flex-1">· {a.adirection} 방면</span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className={`flex items-center gap-2 ${isBothMissed ? 'opacity-40 grayscale' : ''}`}>
+                          <span className={`px-1.5 py-0.5 text-[10px] font-bold text-white rounded-sm ${badge.bg}`}>{badge.text}</span>
+                          <span className={`font-black text-lg ${isMyBus ? 'text-primary' : 'text-text-main dark:text-white'}`}>{a.rtNm}</span>
+                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">· {a.adirection} 방면</span>
+                        </div>
                       </div>
                       
                       <div className="flex items-center gap-2 text-[13px] ml-1 flex-wrap">
                         {/* 첫번째 버스 */}
-                        <div className="flex items-center gap-1.5">
-                          <span className={`font-black ${arr1.time.includes('분') || arr1.time.includes('잠시') || arr1.time.includes('도착') ? 'text-red-500' : 'text-gray-500'}`}>{arr1.time}</span>
-                          {arr1.desc && <span className="text-gray-400 font-medium">{arr1.desc}</span>}
+                        <div className={`flex flex-col ${isMissed1 ? 'opacity-40 grayscale' : ''}`}>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`font-black ${arr1.time.includes('분') || arr1.time.includes('잠시') || arr1.time.includes('도착') ? (isMissed1 ? 'text-gray-500 line-through' : 'text-danger') : 'text-gray-500'}`}>{arr1.time}</span>
+                            {arr1.desc && <span className={`font-medium ${isMissed1 ? 'text-gray-400 line-through' : 'text-gray-400'}`}>{arr1.desc}</span>}
+                          </div>
+                          {isMyBus && !isMissed1 && accumulatedTime > 0 && <span className="text-[10px] text-success font-bold">약 {eta1 - accumulatedTime}분 대기</span>}
+                          {isMyBus && isMissed1 && <span className="text-[10px] text-danger font-bold">놓침 예상</span>}
                         </div>
                         
                         {/* 두번째 버스가 있으면 표시 */}
                         {a.arrmsg2 && arr2.time && !arr2.time.includes('정보') && (
                           <>
                             <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
-                            <div className="flex items-center gap-1.5 opacity-70">
-                              <span className={`font-bold ${arr2.time.includes('분') || arr2.time.includes('잠시') ? 'text-red-500' : 'text-gray-500'}`}>{arr2.time}</span>
-                              {arr2.desc && <span className="text-gray-400 text-[12px] font-medium">{arr2.desc}</span>}
+                            <div className={`flex flex-col ${isMissed2 ? 'opacity-40 grayscale' : ''}`}>
+                              <div className="flex items-center gap-1.5 opacity-70">
+                                <span className={`font-bold ${arr2.time.includes('분') || arr2.time.includes('잠시') ? (isMissed2 ? 'text-gray-500 line-through' : 'text-danger') : 'text-gray-500'}`}>{arr2.time}</span>
+                                {arr2.desc && <span className={`text-[12px] font-medium ${isMissed2 ? 'text-gray-400 line-through' : 'text-gray-400'}`}>{arr2.desc}</span>}
+                              </div>
+                              {isMyBus && !isMissed2 && accumulatedTime > 0 && <span className="text-[10px] text-success font-bold">약 {eta2 - accumulatedTime}분 대기</span>}
+                              {isMyBus && isMissed2 && <span className="text-[10px] text-danger font-bold">놓침 예상</span>}
                             </div>
                           </>
                         )}
                       </div>
+                      {isBothMissed && interval && (
+                        <div className="mt-3 p-2 bg-red-500/10 rounded-lg text-center">
+                          <p className="text-[11px] font-bold text-danger">제공된 차량 탑승 불가, 다음 정규 배차(약 {interval}분) 대기 필요</p>
+                        </div>
+                      )}
                     </div>
                   );
                 })
