@@ -16,7 +16,13 @@ const parseArrival = (msg: string) => {
 
 const parseEstimatedMinutes = (msg: string) => {
   if (!msg) return 999;
-  if (msg.includes('곧 도착') || msg.includes('잠시') || msg.includes('전역') || msg.includes('1번째 전')) return 1;
+  if (msg.includes('곧 도착') || msg.includes('잠시') || msg.includes('당역') || msg.includes('접근') || msg.includes('진입') || msg.includes('1번째 전')) return 1;
+  if (msg.includes('도착')) {
+    if (msg.includes('전역') || msg.includes('전전역')) return 2;
+    return 0;
+  }
+  if (msg.includes('전역')) return 2;
+  if (msg.includes('출발')) return 3;
   const match = msg.match(/(\d+)분/);
   if (match) return parseInt(match[1], 10);
   if (msg.includes('번째 전')) {
@@ -217,7 +223,9 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                       const diff = eta - accumulatedTime;
                       
                       let statusEl = null;
-                      if (diff <= 2) {
+                      if (diff > 100) {
+                        statusEl = <span className="text-[12px] text-gray-400 font-bold">여유/서두름 산출 불가</span>;
+                      } else if (diff <= 2) {
                         statusEl = <span className="text-[12px] text-danger font-black bg-danger/10 px-2 py-0.5 rounded-md">⚡ 서두르세요 ({diff}분 여유)</span>;
                       } else {
                         statusEl = <span className="text-[12px] text-success font-bold">도착 후 {diff}분 대기</span>;
@@ -234,10 +242,10 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                       );
                     })
                   )}
-                  {isAllMissed && interval && (
+                  {isAllMissed && (
                     <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-500">실시간 차량은 이미 통과.</span>
-                      <span className="text-xs font-bold text-danger">다음 차 약 {interval}분 뒤 대기</span>
+                      <span className="text-xs font-bold text-danger">다음 차 {interval ? `약 ${interval}분 뒤 대기` : '대기'}</span>
                     </div>
                   )}
                 </>
@@ -347,7 +355,9 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                           {validBuses.map((b, bIdx) => {
                             const diff = b.eta - accumulatedTime;
                             let statusEl = null;
-                            if (diff <= 2) {
+                            if (diff > 100) {
+                              statusEl = <span className="text-[12px] text-gray-400 font-bold">여유/서두름 산출 불가</span>;
+                            } else if (diff <= 2) {
                               statusEl = <span className="text-[12px] text-danger font-black bg-danger/10 px-2 py-0.5 rounded-md">⚡ 서두르세요 ({diff}분 여유)</span>;
                             } else {
                               statusEl = <span className="text-[12px] text-success font-bold">도착 후 {diff}분 대기</span>;
