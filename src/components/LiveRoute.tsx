@@ -11,14 +11,6 @@ const parseArrival = (msg: string) => {
     const leftStop = match[2].trim().replace('번째 전', '정류장');
     return { time: timeStr, desc: leftStop };
   }
-const parseArrival = (msg: string) => {
-  if (!msg || msg === '정보 없음' || msg === '운행종료') return { time: msg, desc: '' };
-  const match = msg.match(/([\w\d\s분초]+)후\[(.*?)\]/);
-  if (match) {
-    let timeStr = match[1].trim().replace(/(\d+분)\s*\d+초/, '$1'); // "2분57초" -> "2분"
-    const leftStop = match[2].trim().replace('번째 전', '정류장');
-    return { time: timeStr, desc: leftStop };
-  }
   return { time: msg.replace('[', ' ').replace(']', ''), desc: '' };
 }
 
