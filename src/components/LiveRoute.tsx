@@ -101,13 +101,23 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
   const handleCheck = (idx: number) => {
     setCompletedSteps(p => {
       const next = { ...p };
-      // 사용자가 idx(예: 환승역)의 체크 버튼을 눌렀다는 건, 그 앞의 모든 과정(도보, 이전 탑승)이 끝났음을 의미함
-      for (let i = 0; i < idx; i++) {
-        next[i] = true;
+      const currentActiveIdx = (subPaths as any[]).findIndex((_, i) => !p[i]);
+      const safeActiveIdx = currentActiveIdx === -1 ? subPaths.length : currentActiveIdx;
+
+      if (idx === safeActiveIdx) {
+        // 이미 도착해 현위치인 상태의 버튼을 다시 누름 -> 취소(롤백) 요청
+        for (let i = Math.max(0, idx - 1); i < subPaths.length; i++) {
+          next[i] = false;
+        }
+      } else {
+        // 미래의 정거장에 도착 -> 해당 정거장 이전까지 모두 완료 처리
+        for (let i = 0; i < idx; i++) {
+          next[i] = true;
+        }
       }
       return next;
     })
-    fetchAll() // 클릭 즉시 실시간 데이터 갱신
+    fetchAll()
   }
 
   const renderSegment = (path: any, idx: number) => {
@@ -163,10 +173,10 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
             {isActive && (
               <button 
                 onClick={() => handleCheck(idx)}
-                className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${isCompleted ? 'bg-success text-white border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success'}`}
+                className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${idx < safeActiveIdx ? 'bg-gray-100 text-gray-400 border-gray-200' : (idx === safeActiveIdx ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-600/50' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success')}`}
               >
-                {isCompleted && <CheckCircle2 size={12} />}
-                {isCompleted ? '완료됨' : '도착 (체크)'}
+                {idx < safeActiveIdx && <CheckCircle2 size={12} />}
+                {idx < safeActiveIdx ? '지나감' : (idx === safeActiveIdx ? '📍 현위치 (취소)' : '도착 (체크)')}
               </button>
             )}
           </div>
@@ -302,10 +312,10 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
             {isActive && (
               <button 
                 onClick={() => handleCheck(idx)}
-                className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${isCompleted ? 'bg-success text-white border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success'}`}
+                className={`flex items-center gap-1 py-1 px-3 rounded-full text-[10px] font-bold border transition-colors ${idx < safeActiveIdx ? 'bg-gray-100 text-gray-400 border-gray-200' : (idx === safeActiveIdx ? 'bg-success/10 text-success border-success' : 'bg-white text-gray-400 border-gray-200 hover:border-success hover:text-success')}`}
               >
-                {isCompleted && <CheckCircle2 size={12} />}
-                {isCompleted ? '완료됨' : '도착 (체크)'}
+                {idx < safeActiveIdx && <CheckCircle2 size={12} />}
+                {idx < safeActiveIdx ? '지나감' : (idx === safeActiveIdx ? '📍 현위치 (취소)' : '도착 (체크)')}
               </button>
             )}
           </div>
