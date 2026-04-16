@@ -93,6 +93,12 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
     return () => clearInterval(timer)
   }, [isActive, fetchAll])
 
+  const formatETA = useCallback((addedMins: number) => {
+    const baseTime = lastUpdated || new Date();
+    const eta = new Date(baseTime.getTime() + addedMins * 60000);
+    return eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  }, [lastUpdated]);
+
   const renderSegment = (path: any, idx: number) => {
     // 누적 소요 시간 계산 로직 (나의 정류장 도착 예상 시간)
     let accumulatedTime = 0;
@@ -125,7 +131,10 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
 
           <div className="flex items-center gap-2 mb-1">
             <TrainFront size={18} className="text-purple-500" />
-            <h4 className="font-bold text-lg text-purple-600 dark:text-purple-400">{path.startName} 탑승</h4>
+            <h4 className="font-bold text-lg text-purple-600 dark:text-purple-400">
+              {path.startName} 탑승
+              {isActive && <span className="text-sm text-purple-600/50 dark:text-purple-400/50 font-medium ml-2">예상 {formatETA(accumulatedTime)}</span>}
+            </h4>
           </div>
 
           <div className="flex gap-2 mb-3">
@@ -250,12 +259,15 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
               <div className="p-2 bg-success/10 rounded-xl">
                 <Bus size={18} className="text-success" />
               </div>
-              <h4 className="font-extrabold text-xl text-text-main dark:text-text-main-dark">{path.startName}</h4>
+              <h4 className="font-extrabold text-xl text-text-main dark:text-text-main-dark">
+                {path.startName}
+                {isActive && <span className="text-sm font-medium ml-2 text-gray-400">예상 {formatETA(accumulatedTime)}</span>}
+              </h4>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-1.5 mb-4">
-            <span className="px-2.5 py-1 text-[11px] font-black premium-gradient text-white rounded-lg shadow-sm">Target: {busNo}번</span>
+            <span className="px-2.5 py-1 text-[11px] font-black premium-gradient text-white rounded-lg shadow-sm">목표: {busNo}번</span>
             {isCentral && (
               <span className="px-2 py-1 text-[10px] font-black bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg">중앙차로</span>
             )}
@@ -382,16 +394,16 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
                 <span className="text-xl font-bold opacity-70 tracking-tighter uppercase">Min</span>
               </div>
               <p className="text-xs font-bold opacity-80 mt-1 uppercase tracking-widest flex items-center gap-2">
-                Total Journey Time
+                총 소요 시간
               </p>
             </div>
             <div className="text-right">
               <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider mb-2">
-                {route.path_info?.info?.transitCount || 0} Transits
+                환승 {route.path_info?.info?.transitCount || 0}회
               </span>
               {lastUpdated && (
                 <p className="text-[10px] font-bold opacity-60">
-                  Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  업데이트 {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </p>
               )}
             </div>
@@ -437,7 +449,7 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
 
       {/* 여정 타임라인 */}
       <div className="flex-1">
-        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-text-sub dark:text-text-sub-dark opacity-40 mb-8 pl-1">Real-time Timeline</h3>
+        <h3 className="text-xs font-black text-text-sub dark:text-text-sub-dark opacity-60 mb-8 pl-1">여정 진행 상황</h3>
         
         <div className="relative">
           {/* 출발점 */}
@@ -446,7 +458,10 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
               <MapPin size={16} className="text-white" />
             </div>
             <div className="absolute w-0.5 h-full bg-gradient-to-b from-primary to-primary/10 -left-[24px] top-9" />
-            <h4 className="font-extrabold text-xl pt-0.5">Start: {route.start_place || route.start_point?.nickname || ''}</h4>
+            <h4 className="font-extrabold text-xl pt-0.5">
+              출발 {isActive && <span className="text-sm font-medium text-gray-400 ml-2">예상 {formatETA(0)}</span>}
+            </h4>
+            <p className="text-sm font-bold text-gray-500 mt-1">{route.start_place || route.start_point?.nickname || ''}</p>
           </div>
 
           {/* 구간 세그먼트 */}
@@ -459,10 +474,10 @@ export default function LiveRoute({ route, onBack }: { route: Route, onBack: () 
             <div className="absolute w-8 h-8 bg-success rounded-full -left-[38px] top-6 shadow-lg shadow-success/30 flex items-center justify-center">
               <CheckCircle2 size={18} className="text-white" />
             </div>
-            <h4 className="font-extrabold text-2xl pt-6">Goal: {route.end_place || route.end_point?.nickname || ''}</h4>
-            <p className="text-xs font-bold text-text-sub dark:text-text-sub-dark opacity-50 mt-2 uppercase tracking-widest flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-success" /> Journey Completed
-            </p>
+            <h4 className="font-extrabold text-2xl pt-6">
+              도착 {isActive && <span className="text-sm font-medium text-gray-400 ml-2">예상 {formatETA(totalMins)}</span>}
+            </h4>
+            <p className="text-sm font-bold text-gray-500 mt-1">{route.end_place || route.end_point?.nickname || ''}</p>
           </div>
         </div>
       </div>
